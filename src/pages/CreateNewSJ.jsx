@@ -10,11 +10,11 @@ export default function CreateNewSJ() {
 
   // Fallback sample drivers if context empty
   const sampleDrivers = [
-    { id: 'DRV-001', employeeId: 'EMP-2022-001', name: 'Sudirman Pratama', phone: '081234567890', simType: 'B2', status: 'AVAILABLE' },
-    { id: 'DRV-002', employeeId: 'EMP-2021-045', name: 'Agus Mahendra', phone: '081234567891', simType: 'C', status: 'AVAILABLE' },
+    { id: 'DRV-001', employeeId: 'EMP-2022-001', name: 'Sudirman Pratama', phone: '081234567890', simType: 'B2', status: 'ACTIVE' },
+    { id: 'DRV-002', employeeId: 'EMP-2021-045', name: 'Agus Mahendra', phone: '081234567891', simType: 'C', status: 'ACTIVE' },
     { id: 'DRV-003', employeeId: 'EMP-2021-012', name: 'Budi Santoso', phone: '081234567892', simType: 'B2', status: 'ON_DISPATCH' },
     { id: 'DRV-004', employeeId: 'EMP-2021-033', name: 'Rudi Hermawan', phone: '081234567893', simType: 'C', status: 'ON_LEAVE' },
-    { id: 'DRV-005', employeeId: 'EMP-2023-008', name: 'Dewi Lestari', phone: '081234567894', simType: 'B1', status: 'AVAILABLE' },
+    { id: 'DRV-005', employeeId: 'EMP-2023-008', name: 'Dewi Lestari', phone: '081234567894', simType: 'B1', status: 'ACTIVE' },
   ];
 
   const allDrivers = drivers.length > 0 ? drivers : sampleDrivers;

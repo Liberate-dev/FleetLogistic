@@ -158,9 +158,9 @@ export default function ProofOfDelivery() {
 
   const CONDITION_CONFIG = {
     good: { label: 'Barang Diterima Baik', color: 'primary', icon: 'check_circle' },
-    partial_damage: { label: 'Sebagian Rusak', color: 'amber-600', icon: 'warning' },
-    damaged: { label: 'Barang Rusak', color: 'error', icon: 'error' },
-    missing: { label: 'Barang Hilang', color: 'error', icon: 'report_missing' },
+    partial_damage: { label: 'Sebagian Rusak', color: 'amber', icon: 'warning' },
+    damaged: { label: 'Barang Rusak', color: 'red', icon: 'error' },
+    missing: { label: 'Barang Hilang', color: 'red', icon: 'report_missing' },
   };
 
   return (
@@ -314,25 +314,34 @@ export default function ProofOfDelivery() {
               <div className="space-y-3">
                 <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Kondisi Pengiriman *</label>
                 <div className="grid grid-cols-2 gap-3">
-                  {Object.entries(CONDITION_CONFIG).map(([key, cfg]) => (
-                    <button
-                      key={key}
-                      onClick={() => setDeliveryCondition(key)}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${
-                        deliveryCondition === key
-                          ? `border-${cfg.color} bg-${cfg.color}/5`
-                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-                      }`}
-                      type="button"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`material-symbols-outlined text-${cfg.color}`}>{cfg.icon}</span>
-                        <span className={`text-sm font-bold ${deliveryCondition === key ? `text-${cfg.color}` : 'text-slate-600 dark:text-slate-300'}`}>
-                          {cfg.label}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                  {Object.entries(CONDITION_CONFIG).map(([key, cfg]) => {
+                    const isSelected = deliveryCondition === key;
+                    const borderClass = isSelected && key === 'good' ? 'border-primary' :
+                                       isSelected && key === 'partial_damage' ? 'border-amber-500' :
+                                       isSelected ? 'border-red-500' : 'border-slate-200 dark:border-slate-700';
+                    const bgClass = isSelected && key === 'good' ? 'bg-primary/5' :
+                                    isSelected && key === 'partial_damage' ? 'bg-amber-50 dark:bg-amber-900/20' :
+                                    isSelected ? 'bg-red-50 dark:bg-red-900/20' : '';
+                    const textClass = isSelected && key === 'good' ? 'text-primary' :
+                                     isSelected && key === 'partial_damage' ? 'text-amber-600' :
+                                     isSelected ? 'text-red-500' : 'text-slate-600 dark:text-slate-300';
+                    const iconClass = textClass;
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => setDeliveryCondition(key)}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${borderClass} ${bgClass} ${!isSelected ? 'hover:border-slate-300 dark:hover:border-slate-600' : ''}`}
+                        type="button"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`material-symbols-outlined ${iconClass}`}>{cfg.icon}</span>
+                          <span className={`text-sm font-bold ${textClass}`}>
+                            {cfg.label}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

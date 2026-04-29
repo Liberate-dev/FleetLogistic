@@ -16,8 +16,8 @@ const SAMPLE_FLEET = [
 ];
 
 const SAMPLE_DRIVERS = [
-  { id: 'DRV-001', name: 'Sudirman P.', sim: 'B2', simExpiry: '2027-06-15', status: 'AVAILABLE' },
-  { id: 'DRV-002', name: 'Agus M.', sim: 'C', simExpiry: '2026-12-01', status: 'AVAILABLE' },
+  { id: 'DRV-001', name: 'Sudirman P.', sim: 'B2', simExpiry: '2027-06-15', status: 'ACTIVE' },
+  { id: 'DRV-002', name: 'Agus M.', sim: 'C', simExpiry: '2026-12-01', status: 'ACTIVE' },
   { id: 'DRV-003', name: 'Budi S.', sim: 'B2', simExpiry: '2026-03-01', status: 'ON_DISPATCH' },
 ];
 
@@ -67,9 +67,9 @@ export default function NewDispatch() {
     [fleet]
   );
 
-  // Available drivers: only AVAILABLE status
+  // Available drivers: only ACTIVE status
   const availableDrivers = useMemo(() =>
-    (drivers.length > 0 ? drivers : SAMPLE_DRIVERS).filter(d => d.status === 'AVAILABLE'),
+    (drivers.length > 0 ? drivers : SAMPLE_DRIVERS).filter(d => d.status === 'ACTIVE'),
     [drivers]
   );
 

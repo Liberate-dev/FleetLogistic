@@ -208,6 +208,10 @@ function fleetOpsReducer(state, action) {
     case 'MATERIALS_SET':
       return { ...state, materials: action.payload };
 
+    // SJ Actions
+    case 'SJ_SET':
+      return { ...state, suratJalan: action.payload };
+
     // Dispatch Actions
     case 'DISPATCHES_SET':
       return { ...state, dispatches: action.payload };
@@ -243,22 +247,28 @@ function fleetOpsReducer(state, action) {
 export function FleetOpsProvider({ children }) {
   const [state, dispatch] = useReducer(fleetOpsReducer, initialState);
 
-  // Fetch drivers on mount
+  // Fetch initial data on mount
   useEffect(() => {
     async function fetchData() {
       try {
-        const [driversRes, customersRes, materialsRes] = await Promise.all([
+        const [driversRes, customersRes, materialsRes, vehiclesRes, suratJalanRes] = await Promise.all([
           fetch('/api/drivers'),
           fetch('/api/customers'),
           fetch('/api/materials'),
+          fetch('/api/vehicles'),
+          fetch('/api/surat-jalan'),
         ]);
         const driversData = await driversRes.json();
         const customersData = await customersRes.json();
         const materialsData = await materialsRes.json();
+        const vehiclesData = await vehiclesRes.json();
+        const suratJalanData = await suratJalanRes.json();
 
         dispatch({ type: 'DRIVERS_SET', payload: driversData.drivers || [] });
         dispatch({ type: 'CUSTOMERS_SET', payload: customersData.customers || [] });
         dispatch({ type: 'MATERIALS_SET', payload: materialsData.materials || [] });
+        dispatch({ type: 'FLEET_SET', payload: vehiclesData.vehicles || [] });
+        dispatch({ type: 'SJ_SET', payload: suratJalanData.suratJalan || [] });
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
       }
