@@ -1,0 +1,574 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Layout from '../components/Layout';
+import Modal from '../components/ui/Modal';
+import FileUpload from '../components/ui/FileUpload';
+import StatusBadge from '../components/ui/StatusBadge';
+import { useFleetOps } from '../context';
+import { documentNumberingService, auditLogger } from '../utils';
+import { SJ_STATUS } from '../constants';
+
+const POD_STATUS = {
+  PENDING: 'POD PENDING',
+  RECEIVED: 'POD RECEIVED',
+  DISCREPANCY: 'POD DISCREPANCY',
+};
+
+export default function ProofOfDelivery() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const { suratJalan, pods, createPOD, updatePOD, changeSJStatus, setLoading, addNotification } = useFleetOps();
+
+  // POD number
+  const [podNumber, setPodNumber] = useState('');
+
+  // SJ Selection
+  const [selectedSJ, setSelectedSJ] = useState(searchParams.get('sj') || '');
+
+  // Receiver Info
+  const [receiverName, setReceiverName] = useState('');
+  const [receiverTitle, setReceiverTitle] = useState('');
+  const [receiverPhone, setReceiverPhone] = useState('');
+  const [receivedAt, setReceivedAt] = useState(new Date().toISOString().slice(0, 16));
+
+  // Delivery Condition
+  const [deliveryCondition, setDeliveryCondition] = useState('good'); // good, partial_damage, damaged, missing
+
+  // Discrepancy Details
+  const [discrepancyDetails, setDiscrepancyDetails] = useState('');
+  const [damagedItems, setDamagedItems] = useState([]);
+  const [missingItems, setMissingItems] = useState([]);
+
+  // Notes
+  const [notes, setNotes] = useState('');
+
+  // Photos
+  const [barangPhotos, setBarangPhotos] = useState([]);
+  const [tandaTerimaPhotos, setTandaTerimaPhotos] = useState([]);
+  const [kerusakanPhotos, setKerusakanPhotos] = useState([]);
+
+  // Confirmation
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
+  // Generate POD number
+  useEffect(() => {
+    const result = documentNumberingService.generateNumber('POD', 'malang');
+    setPodNumber(result.number);
+  }, []);
+
+  // Available SJ: only DISPATCHED or DELIVERED status
+  const availableSJ = useMemo(() =>
+    suratJalan.filter(sj =>
+      sj.status === SJ_STATUS.DISPATCHED ||
+      sj.status === SJ_STATUS.DELIVERED ||
+      sj.status === SJ_STATUS.COMPLETED
+    ),
+    [suratJalan]
+  );
+
+  const selectedSJData = useMemo(() =>
+    suratJalan.find(sj => sj.number === selectedSJ),
+    [suratJalan, selectedSJ]
+  );
+
+  // Auto-select from URL param
+  useEffect(() => {
+    const sjParam = searchParams.get('sj');
+    if (sjParam && suratJalan.some(s => s.number === sjParam)) {
+      setSelectedSJ(sjParam);
+    }
+  }, [searchParams, suratJalan]);
+
+  const handlePhotoUpload = (setter) => (results) => {
+    setter(results);
+  };
+
+  // Validate form
+  const canSubmit = useMemo(() => {
+    return selectedSJ &&
+      receiverName &&
+      receivedAt &&
+      barangPhotos.length >= 1;
+  }, [selectedSJ, receiverName, receivedAt, barangPhotos]);
+
+  // Submit
+  const handleSubmit = () => {
+    setLoading(true);
+
+    // Determine final status
+    let status = POD_STATUS.RECEIVED;
+    if (deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') {
+      status = POD_STATUS.DISCREPANCY;
+    }
+
+    const podData = {
+      id: podNumber,
+      number: podNumber,
+      sjNumber: selectedSJ,
+      status,
+      receiverName,
+      receiverTitle,
+      receiverPhone,
+      receivedAt: new Date(receivedAt).toISOString(),
+      deliveryCondition,
+      discrepancyDetails: status === POD_STATUS.DISCREPANCY ? discrepancyDetails : '',
+      damagedItems,
+      missingItems,
+      notes,
+      photoCount: barangPhotos.length + tandaTerimaPhotos.length + kerusakanPhotos.length,
+      photos: {
+        barang: barangPhotos,
+        tandaTerima: tandaTerimaPhotos,
+        kerusakan: kerusakanPhotos,
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Check if updating existing
+    const existing = pods.find(p => p.id === podNumber);
+    if (existing) {
+      updatePOD(podData);
+    } else {
+      createPOD(podData);
+    }
+
+    // Update SJ status to DELIVERED if it was DISPATCHED
+    if (selectedSJData && selectedSJData.status === SJ_STATUS.DISPATCHED) {
+      changeSJStatus(selectedSJ, SJ_STATUS.DISPATCHED, SJ_STATUS.DELIVERED, `POD ${podNumber} created`);
+    }
+
+    auditLogger.log({
+      action: 'CREATE',
+      documentType: 'POD',
+      documentId: podNumber,
+      details: `POD ${podNumber} created for SJ ${selectedSJ} — ${status}`,
+      metadata: { receiver: receiverName, condition: deliveryCondition, status },
+    });
+
+    setLoading(false);
+    setShowConfirmModal(false);
+    addNotification({
+      type: 'success',
+      title: 'POD Berhasil Dibuat',
+      message: `POD ${podNumber} untuk SJ ${selectedSJ} telah disimpan.`,
+    });
+    navigate('/pod');
+  };
+
+  const CONDITION_CONFIG = {
+    good: { label: 'Barang Diterima Baik', color: 'primary', icon: 'check_circle' },
+    partial_damage: { label: 'Sebagian Rusak', color: 'amber-600', icon: 'warning' },
+    damaged: { label: 'Barang Rusak', color: 'error', icon: 'error' },
+    missing: { label: 'Barang Hilang', color: 'error', icon: 'report_missing' },
+  };
+
+  return (
+    <Layout>
+      {/* Header */}
+      <header className="w-full h-[72px] shrink-0 sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-outline-variant/20 flex items-center justify-between px-4 md:px-8">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
+            <h1 className="font-headline text-xl font-bold tracking-tight text-emerald-900 dark:text-emerald-100">Proof of Delivery</h1>
+            <div className="hidden sm:block h-6 w-px bg-slate-300 dark:bg-slate-700"></div>
+            <div className="hidden sm:flex items-center gap-2 text-slate-500">
+              <span className="material-symbols-outlined text-sm">edit_note</span>
+              <span className="text-sm font-medium font-body bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">{podNumber}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2"
+            type="button"
+          >
+            <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+            <span className="hidden sm:inline">Kembali</span>
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="max-w-5xl mx-auto space-y-8 pb-32">
+
+          {/* Section 1: Select SJ */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-4">
+              <h2 className="text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Delivery Info</h2>
+              <p className="text-sm text-slate-500 mt-2 font-body pr-4">Select the Surat Jalan that this POD is for.</p>
+            </div>
+
+            <div className="lg:col-span-8 glass-panel rounded-2xl p-6 md:p-8 shadow-sm space-y-6 hover:shadow-md transition-shadow">
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-primary uppercase tracking-wider block">Surat Jalan *</label>
+                <select
+                  value={selectedSJ}
+                  onChange={(e) => setSelectedSJ(e.target.value)}
+                  className="w-full bg-white dark:bg-slate-900 border-2 border-primary/50 rounded-xl py-3.5 px-4 text-sm font-bold text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer shadow-sm"
+                >
+                  <option value="">-- Pilih Surat Jalan --</option>
+                  {availableSJ.length === 0 ? (
+                    <option disabled>Tidak ada SJ yang siap dikirim</option>
+                  ) : (
+                    availableSJ.map(sj => (
+                      <option key={sj.number} value={sj.number}>
+                        {sj.number} — {sj.destination} ({sj.clientName})
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
+              {/* SJ Preview */}
+              {selectedSJData && (
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Nomor SJ</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.number}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Klien</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.clientName}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Tujuan</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.destination}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Cargo</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.items?.length || 0} items, {selectedSJData.totalWeight || 0}T</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t border-primary/10">
+                    <StatusBadge status={selectedSJData.status} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Section 2: Receiver Info */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-4">
+              <h2 className="text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Receiver Info</h2>
+              <p className="text-sm text-slate-500 mt-2 font-body pr-4">Identitas penerima barang di lokasi tujuan.</p>
+            </div>
+
+            <div className="lg:col-span-8 glass-panel rounded-2xl p-6 md:p-8 shadow-sm space-y-6 hover:shadow-md transition-shadow">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Penerima *</label>
+                  <input
+                    type="text"
+                    value={receiverName}
+                    onChange={(e) => setReceiverName(e.target.value)}
+                    placeholder="Nama lengkap penerima"
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jabatan / Title</label>
+                  <input
+                    type="text"
+                    value={receiverTitle}
+                    onChange={(e) => setReceiverTitle(e.target.value)}
+                    placeholder="Contoh: Warehouse Manager"
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Telepon</label>
+                  <input
+                    type="tel"
+                    value={receiverPhone}
+                    onChange={(e) => setReceiverPhone(e.target.value)}
+                    placeholder="0812xxxxxxxxx"
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal & Waktu Terima *</label>
+                  <input
+                    type="datetime-local"
+                    value={receivedAt}
+                    onChange={(e) => setReceivedAt(e.target.value)}
+                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Section 3: Delivery Condition */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-4">
+              <h2 className="text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Condition</h2>
+              <p className="text-sm text-slate-500 mt-2 font-body pr-4">Kondisi barang saat diterima di tujuan.</p>
+            </div>
+
+            <div className="lg:col-span-8 glass-panel rounded-2xl p-6 md:p-8 shadow-sm space-y-6 hover:shadow-md transition-shadow">
+              {/* Condition Selection */}
+              <div className="space-y-3">
+                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Kondisi Pengiriman *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {Object.entries(CONDITION_CONFIG).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      onClick={() => setDeliveryCondition(key)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        deliveryCondition === key
+                          ? `border-${cfg.color} bg-${cfg.color}/5`
+                          : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                      }`}
+                      type="button"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`material-symbols-outlined text-${cfg.color}`}>{cfg.icon}</span>
+                        <span className={`text-sm font-bold ${deliveryCondition === key ? `text-${cfg.color}` : 'text-slate-600 dark:text-slate-300'}`}>
+                          {cfg.label}
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Discrepancy Details (if damaged/partial_damage) */}
+              {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
+                <div className="p-4 rounded-xl bg-error/5 border border-error/20 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-error">warning</span>
+                    <h4 className="text-sm font-bold text-error">Detail Kerusakan</h4>
+                  </div>
+                  <textarea
+                    value={discrepancyDetails}
+                    onChange={(e) => setDiscrepancyDetails(e.target.value)}
+                    placeholder="Jelaskan kerusakan yang terjadi pada barang..."
+                    rows={3}
+                    className="w-full bg-white dark:bg-slate-900 border border-error/30 rounded-xl p-3 text-sm focus:ring-2 focus:ring-error focus:outline-none resize-none"
+                  />
+                  <p className="text-xs text-slate-400">Foto kerusakan wajib diupload di section bawah.</p>
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catatan Tambahan</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Catatan lain terkait pengiriman..."
+                  rows={2}
+                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section 4: Photo Evidence (F-POD-02) */}
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <div className="lg:col-span-4">
+              <h2 className="text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Photo Evidence</h2>
+              <p className="text-sm text-slate-500 mt-2 font-body pr-4">Bukti foto serah terima dan kondisi barang.</p>
+              <div className="mt-6 flex items-center gap-3">
+                <span className="w-1.5 h-8 bg-primary rounded-full shadow-[0_0_10px_rgba(70,99,71,0.5)]"></span>
+                <span className="text-xs font-black text-primary uppercase tracking-widest">Minimum 1 Foto</span>
+              </div>
+            </div>
+
+            <div className="lg:col-span-8 space-y-6">
+              {/* Foto Barang Diturunkan */}
+              <div className="glass-panel rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow">
+                <h3 className="text-sm font-bold font-headline text-on-surface mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary">photo_camera</span>
+                  Foto Barang Diturunkan (F-POD-02a) *
+                </h3>
+                <FileUpload
+                  documentId={podNumber || 'temp-pod'}
+                  category="pod_barang"
+                  fileType="photo"
+                  label="Upload Foto Barang"
+                  multiple
+                  required
+                  maxFiles={10}
+                  onUploadComplete={handlePhotoUpload(setBarangPhotos)}
+                  existingFiles={barangPhotos}
+                />
+                {barangPhotos.length > 0 && (
+                  <div className="mt-3 p-2 bg-primary/10 rounded-lg border border-primary/20">
+                    <p className="text-xs font-bold text-primary flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      {barangPhotos.length} foto berhasil diupload
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Foto Surat TTD */}
+              <div className="glass-panel rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow">
+                <h3 className="text-sm font-bold font-headline text-on-surface mb-4 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-secondary">signpost</span>
+                  Foto Surat Tanda Terima (F-POD-02b)
+                </h3>
+                <FileUpload
+                  documentId={podNumber || 'temp-pod'}
+                  category="pod_tanda_terima"
+                  fileType="photo"
+                  label="Upload Foto Surat TTD"
+                  multiple
+                  maxFiles={5}
+                  onUploadComplete={handlePhotoUpload(setTandaTerimaPhotos)}
+                  existingFiles={tandaTerimaPhotos}
+                />
+                {tandaTerimaPhotos.length > 0 && (
+                  <div className="mt-3 p-2 bg-secondary/10 rounded-lg border border-secondary/20">
+                    <p className="text-xs font-bold text-secondary flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      {tandaTerimaPhotos.length} foto berhasil diupload
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Foto Kerusakan (if discrepancy) */}
+              {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
+                <div className="glass-panel rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow border border-error/20">
+                  <h3 className="text-sm font-bold font-headline text-error mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined">broken_image</span>
+                    Foto Kerusakan (F-POD-02c)
+                  </h3>
+                  <FileUpload
+                    documentId={podNumber || 'temp-pod'}
+                    category="pod_kerusakan"
+                    fileType="photo"
+                    label="Upload Foto Kerusakan"
+                    multiple
+                    maxFiles={10}
+                    onUploadComplete={handlePhotoUpload(setKerusakanPhotos)}
+                    existingFiles={kerusakanPhotos}
+                  />
+                  {kerusakanPhotos.length > 0 && (
+                    <div className="mt-3 p-2 bg-error/10 rounded-lg border border-error/20">
+                      <p className="text-xs font-bold text-error flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        {kerusakanPhotos.length} foto berhasil diupload
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </section>
+
+        </div>
+      </div>
+
+      {/* Footer Action Bar */}
+      <div className="absolute bottom-0 left-0 w-full z-40">
+        <div className="backdrop-blur-xl bg-white/90 dark:bg-slate-900/90 border-t border-outline-variant/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+          <div className="flex items-center gap-4">
+            {canSubmit ? (
+              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+                <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+                <span className="text-[11px] font-bold text-primary uppercase tracking-widest">Ready to Submit</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Incomplete</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (!canSubmit) {
+                  addNotification({
+                    type: 'warning',
+                    title: 'Form Belum Lengkap',
+                    message: 'Mohon lengkapi semua field yang wajib diisi (Surat Jalan, Penerima, Tanggal, Foto Barang).',
+                  });
+                  return;
+                }
+                setShowConfirmModal(true);
+              }}
+              disabled={!canSubmit}
+              className="px-8 py-3 rounded-xl bg-primary hover:bg-[#3a533a] text-white font-bold shadow-lg shadow-primary/30 hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:translate-y-0"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Submit POD
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      <Modal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Confirm POD"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-slate-500">You are about to submit POD with the following details:</p>
+
+          <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">POD Number</p>
+              <p className="text-sm font-bold text-on-surface">{podNumber}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Surat Jalan</p>
+              <p className="text-sm font-bold text-on-surface">{selectedSJ}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Received By</p>
+              <p className="text-sm font-bold text-on-surface">{receiverName}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Condition</p>
+              <p className={`text-sm font-bold ${
+                deliveryCondition === 'good' ? 'text-primary' : 'text-error'
+              }`}>
+                {CONDITION_CONFIG[deliveryCondition]?.label}
+              </p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Status</p>
+              <StatusBadge status={deliveryCondition === 'good' ? POD_STATUS.RECEIVED : POD_STATUS.DISCREPANCY} />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Photos</p>
+              <p className="text-sm font-bold text-on-surface">
+                {barangPhotos.length + tandaTerimaPhotos.length + kerusakanPhotos.length} uploaded
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={() => setShowConfirmModal(false)}
+              className="flex-1 px-5 py-3 rounded-xl font-bold text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+              type="button"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="flex-1 px-5 py-3 rounded-xl font-bold text-sm bg-primary text-white hover:bg-[#3a533a] transition-all shadow-md flex items-center justify-center gap-2"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+              Confirm POD
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </Layout>
+  );
+}

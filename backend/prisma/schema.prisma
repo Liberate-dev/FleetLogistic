@@ -1,0 +1,293 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      String   @default("OPERATOR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  suratJalan        SuratJalan[]
+  gateChecks        Dispatch[]         @relation("GateCheckBy")
+  vehicleChecklists VehicleChecklist[]
+  driverChecklists  DriverChecklist[]
+  pod               POD[]
+  lpj               LPJ[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  address   String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  suratJalan SuratJalan[]
+
+  @@map("customers")
+}
+
+model Material {
+  id        String   @id @default(uuid())
+  code      String   @unique
+  name      String
+  unit      String   @default("pcs")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  suratJalanItems SuratJalanItem[]
+
+  @@map("materials")
+}
+
+model Vehicle {
+  id           String   @id @default(uuid())
+  plateNumber  String   @unique
+  type         String   @default("TRUCK")
+  capacity     Float?
+  stnkExpiry   DateTime?
+  kirExpiry    DateTime?
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  dispatches      Dispatch[]
+  vehicleChecklists VehicleChecklist[]
+
+  @@index([status])
+  @@index([stnkExpiry])
+  @@index([kirExpiry])
+  @@map("vehicles")
+}
+
+model Driver {
+  id            String    @id @default(uuid())
+  employeeId    String    @unique
+  name          String
+  phone         String?
+  whatsappPhone String?
+  simType       String?
+  simNumber     String?
+  licenseExpiry DateTime?
+  status        String    @default("ACTIVE")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  dispatches       Dispatch[]
+  driverChecklists DriverChecklist[]
+
+  @@index([status])
+  @@index([licenseExpiry])
+  @@map("drivers")
+}
+
+model SuratJalan {
+  id               String    @id @default(uuid())
+  documentNumber   String    @unique
+  customerId       String
+  date             DateTime  @default(now())
+  status           String    @default("DRAFT")
+  notes            String?
+  createdById      String?
+  assignedAt       DateTime?
+  dispatchedAt     DateTime?
+  deliveredAt      DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // WhatsApp Integration Fields
+  photoRequestId      String?
+  photoReceived       Boolean  @default(false)
+  photoUrl            String?
+  signatureRequestId  String?
+  signatureConfirmed   Boolean  @default(false)
+  uangJalanNominal    Float?
+  uangJalanRecipient  String?
+  danaCadanganNominal  Float?
+
+  // Relations
+  customer   Customer         @relation(fields: [customerId], references: [id])
+  createdBy  User?            @relation(fields: [createdById], references: [id])
+  items      SuratJalanItem[]
+  dispatch   Dispatch?
+
+  @@index([documentNumber])
+  @@index([status])
+  @@index([customerId])
+  @@index([date])
+  @@map("surat_jalan")
+}
+
+model SuratJalanItem {
+  id            String   @id @default(uuid())
+  suratJalanId  String
+  materialId    String
+  quantity      Float
+  unitPrice     Float    @default(0)
+
+  // Relations
+  suratJalan SuratJalan @relation(fields: [suratJalanId], references: [id], onDelete: Cascade)
+  material   Material    @relation(fields: [materialId], references: [id])
+
+  @@map("surat_jalan_items")
+}
+
+model Dispatch {
+  id              String    @id @default(uuid())
+  suratJalanId    String    @unique
+  vehicleId       String?
+  driverId        String?
+  gateCheckStatus String    @default("PENDING")
+  gateCheckNotes  String?
+  gateCheckAt     DateTime?
+  gateCheckById   String?
+  status          String    @default("ASSIGNED")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  suratJalan       SuratJalan        @relation(fields: [suratJalanId], references: [id], onDelete: Cascade)
+  vehicle          Vehicle?           @relation(fields: [vehicleId], references: [id])
+  driver           Driver?            @relation(fields: [driverId], references: [id])
+  gateCheckBy      User?              @relation("GateCheckBy", fields: [gateCheckById], references: [id])
+  vehicleChecklist VehicleChecklist?
+  driverChecklist  DriverChecklist?
+  pod              POD?
+  lpj              LPJ?
+
+  @@index([suratJalanId])
+  @@index([status])
+  @@index([vehicleId])
+  @@index([driverId])
+  @@map("dispatches")
+}
+
+model VehicleChecklist {
+  id             String   @id @default(uuid())
+  dispatchId     String   @unique
+  vehicleId      String
+  checklistItems String
+  condition      String   @default("GOOD")
+  notes          String?
+  checkedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  dispatch  Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
+  checkedBy User?    @relation(fields: [checkedById], references: [id])
+
+  @@map("vehicle_checklists")
+}
+
+model DriverChecklist {
+  id             String   @id @default(uuid())
+  dispatchId     String   @unique
+  driverId       String
+  hasLicense     Boolean  @default(true)
+  licenseValid   Boolean  @default(true)
+  condition      String   @default("FIT")
+  notes          String?
+  checkedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Relations
+  dispatch  Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  driver    Driver   @relation(fields: [driverId], references: [id])
+  checkedBy User?    @relation(fields: [checkedById], references: [id])
+
+  @@map("driver_checklists")
+}
+
+model POD {
+  id           String   @id @default(uuid())
+  dispatchId   String   @unique
+  receivedBy   String
+  receivedAt   DateTime @default(now())
+  signature    String?
+  photos       String?
+  notes        String?
+  submittedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  dispatch    Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  submittedBy User?     @relation(fields: [submittedById], references: [id])
+
+  @@map("pods")
+}
+
+model LPJ {
+  id           String   @id @default(uuid())
+  dispatchId   String   @unique
+  startKm      Float?
+  endKm        Float?
+  fuelUsed     Float?
+  expenses     String?
+  notes        String?
+  submittedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  dispatch    Dispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  submittedBy User?     @relation(fields: [submittedById], references: [id])
+
+  @@map("lpjs")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  message   String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  entityType String
+  entityId   String
+  action     String
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

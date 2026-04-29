@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Fonnte Test</title>
+  <style>
+    body { font-family: system-ui; max-width: 900px; margin: 50px auto; padding: 20px; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 20px; margin-bottom: 20px; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, textarea, select { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background: #3a533a; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 15px; }
+    button:hover { background: #2a422a; }
+    .result { margin-top: 15px; padding: 10px; border-radius: 4px; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    .info { background: #d1ecf1; color: #0c5460; }
+    pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; overflow-y: auto; }
+    img { max-width: 300px; border: 1px solid #ccc; border-radius: 4px; margin: 5px; }
+    .webhook-log { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 15px; max-height: 400px; overflow-y: auto; }
+    .log-entry { border-bottom: 1px solid #e9ecef; padding: 10px 0; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: #6c757d; font-size: 11px; }
+    .log-type { font-weight: bold; padding: 2px 6px; border-radius: 3px; font-size: 11px; }
+    .log-photo { background: #d4edda; color: #155724; }
+    .log-confirm { background: #cce5ff; color: #004085; }
+    .log-text { background: #e2e3e5; color: #383d41; }
+  </style>
+</head>
+<body>
+  <h1>Fonnte WhatsApp Test</h1>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div>
+      <div class="card">
+        <h2>Send Photo Request</h2>
+        <form id="photoForm">
+          <label>Phone (08xxx atau 62xxx)</label>
+          <input type="text" id="photoPhone" value="081234567890" required>
+
+          <label>Driver Name</label>
+          <input type="text" id="photoDriver" value="Test Driver" required>
+
+          <label>SJ Number</label>
+          <input type="text" id="photoSJ" value="SJ-20260428-001" required>
+
+          <button type="submit">Send Photo Request</button>
+        </form>
+        <div id="photoResult" class="result" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h2>Send Signature Request</h2>
+        <form id="sigForm">
+          <label>Phone (08xxx atau 62xxx)</label>
+          <input type="text" id="sigPhone" value="081234567890" required>
+
+          <label>Driver Name</label>
+          <input type="text" id="sigDriver" value="Test Driver" required>
+
+          <label>SJ Number</label>
+          <input type="text" id="sigSJ" value="SJ-20260428-001" required>
+
+          <label>Nominal (Rp)</label>
+          <input type="number" id="sigNominal" value="500000" required>
+
+          <button type="submit">Send Signature Request</button>
+        </form>
+        <div id="sigResult" class="result" style="display:none"></div>
+      </div>
+
+      <div class="card">
+        <h2>Simulate Webhook (for testing)</h2>
+        <form id="webhookForm">
+          <label>Type</label>
+          <select id="webhookType">
+            <option value="photo">Photo</option>
+            <option value="confirm">Konfirmasi</option>
+            <option value="text">Text</option>
+          </select>
+
+          <label>Phone (62xxx)</label>
+          <input type="text" id="webhookPhone" value="6281234567890" required>
+
+          <label>Message</label>
+          <textarea id="webhookMessage" rows="2">KONFIRMASI</textarea>
+
+          <label>Image URL (untuk photo)</label>
+          <input type="text" id="webhookImage" placeholder="https://example.com/photo.jpg">
+
+          <button type="submit">Simulate Webhook</button>
+        </form>
+        <div id="webhookResult" class="result" style="display:none"></div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="margin: 0;">Webhook Log (Real-time)</h2>
+          <button onclick="clearLog()" style="background: #dc3545; padding: 5px 10px; font-size: 12px;">Clear</button>
+        </div>
+        <div id="webhookLog" class="webhook-log" style="margin-top: 15px;">
+          <p style="color: #6c757d; text-align: center;">Menunggu webhook masuk...</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Foto Masuk</h2>
+        <div id="photoGallery" style="display: flex; flex-wrap: wrap; gap: 10px;">
+          <p id="noPhotos" style="color: #6c757d;">Belum ada foto masuk</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Konfirmasi TTD</h2>
+        <div id="confirmationList"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let webhookLog = [];
+    let photos = [];
+    let confirmations = [];
+
+    function addLog(type, phone, message, image = null) {
+      const log = document.getElementById('webhookLog');
+      const time = new Date().toLocaleTimeString('id-ID');
+      const typeClass = type === 'photo' ? 'log-photo' : type === 'confirm' ? 'log-confirm' : 'log-text';
+
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `
+        <div class="log-time">${time}</div>
+        <span class="log-type ${typeClass}">${type.toUpperCase()}</span>
+        <strong>${phone}</strong>
+        <div>${message || ''}</div>
+        ${image ? `<img src="${image}" alt="photo">` : ''}
+      `;
+
+      log.insertBefore(entry, log.firstChild);
+
+      if (type === 'photo' && image) {
+        photos.push({ phone, image, time });
+        updatePhotoGallery();
+      }
+
+      if (type === 'confirm') {
+        confirmations.push({ phone, message, time });
+        updateConfirmationList();
+      }
+    }
+
+    function updatePhotoGallery() {
+      const gallery = document.getElementById('photoGallery');
+      const noPhotos = document.getElementById('noPhotos');
+
+      if (photos.length === 0) {
+        noPhotos.style.display = 'block';
+        return;
+      }
+
+      noPhotos.style.display = 'none';
+
+      let html = '';
+      photos.forEach((p, i) => {
+        html += `
+          <div style="border: 1px solid #ccc; border-radius: 8px; padding: 10px; background: white;">
+            <img src="${p.image}" alt="photo ${i+1}">
+            <div style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+              ${p.phone}<br>${p.time}
+            </div>
+          </div>
+        `;
+      });
+      gallery.innerHTML = html;
+    }
+
+    function updateConfirmationList() {
+      const list = document.getElementById('confirmationList');
+
+      if (confirmations.length === 0) {
+        list.innerHTML = '<p style="color: #6c757d;">Belum ada konfirmasi</p>';
+        return;
+      }
+
+      let html = '';
+      confirmations.forEach((c, i) => {
+        html += `
+          <div style="padding: 10px; border: 1px solid #28a745; border-radius: 8px; margin-bottom: 10px; background: #d4edda;">
+            <strong style="color: #155724;">Konfirmasi #${i+1}</strong><br>
+            <span>Phone: ${c.phone}</span><br>
+            <span style="color: #6c757d;">${c.time}</span>
+          </div>
+        `;
+      });
+      list.innerHTML = html;
+    }
+
+    function clearLog() {
+      webhookLog = [];
+      photos = [];
+      confirmations = [];
+      document.getElementById('webhookLog').innerHTML = '<p style="color: #6c757d; text-align: center;">Menunggu webhook masuk...</p>';
+      document.getElementById('photoGallery').innerHTML = '<p id="noPhotos" style="color: #6c757d;">Belum ada foto masuk</p>';
+      document.getElementById('confirmationList').innerHTML = '';
+    }
+
+    function showResult(id, data, isError) {
+      const el = document.getElementById(id);
+      el.style.display = 'block';
+      el.className = 'result ' + (isError ? 'error' : 'success');
+      el.innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+    }
+
+    document.getElementById('photoForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const body = {
+        phone: document.getElementById('photoPhone').value,
+        driverName: document.getElementById('photoDriver').value,
+        sjNumber: document.getElementById('photoSJ').value
+      };
+      const res = await fetch('/api/fonnte/send-photo-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      showResult('photoResult', data, !res.ok);
+    };
+
+    document.getElementById('sigForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const body = {
+        phone: document.getElementById('sigPhone').value,
+        driverName: document.getElementById('sigDriver').value,
+        sjNumber: document.getElementById('sigSJ').value,
+        nominal: parseFloat(document.getElementById('sigNominal').value)
+      };
+      const res = await fetch('/api/fonnte/send-signature-request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      showResult('sigResult', data, !res.ok);
+    };
+
+    document.getElementById('webhookForm').onsubmit = async (e) => {
+      e.preventDefault();
+      const body = {
+        type: document.getElementById('webhookType').value,
+        phone: document.getElementById('webhookPhone').value,
+        message: document.getElementById('webhookMessage').value,
+        image: document.getElementById('webhookImage').value || null
+      };
+      const res = await fetch('/api/webhooks/fonnte/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      showResult('webhookResult', data, !res.ok);
+
+      // Add to log
+      if (data.success) {
+        addLog(body.type, body.phone, body.message, body.image);
+      }
+    };
+
+    // Poll for webhook updates every 3 seconds
+    async function pollWebhook() {
+      try {
+        const res = await fetch('/api/webhooks/fonnte/logs');
+        if (res.ok) {
+          const logs = await res.json();
+          logs.forEach(log => {
+            addLog(log.type, log.phone, log.message, log.image);
+          });
+        }
+      } catch (err) {
+        // Silent fail - just polling
+      }
+    }
+
+    setInterval(pollWebhook, 3000);
+  </script>
+</body>
+</html>
