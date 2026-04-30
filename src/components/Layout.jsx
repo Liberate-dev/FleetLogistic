@@ -15,12 +15,14 @@ export default function Layout({ children }) {
       <MobileNav />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col bg-surface">
+      <div className="flex-1 flex flex-col min-h-screen bg-surface">
         {/* Mobile Header */}
         <MobileHeader />
 
-        {/* Page Content */}
-        {children}
+        {/* Page Content - takes remaining space */}
+        <main className="flex-1 flex flex-col">
+          {children}
+        </main>
       </div>
     </div>
   );

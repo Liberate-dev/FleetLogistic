@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { Modal, FileUpload } from '../components/ui';
 import { documentNumberingService, auditLogger } from '../utils';
@@ -6,6 +7,7 @@ import { useFleetOps } from '../context';
 import { SJ_STATUS } from '../constants';
 
 export default function CreateNewSJ() {
+  const navigate = useNavigate();
   const { createSJ, setLoading, addNotification, drivers } = useFleetOps();
 
   // Fallback sample drivers if context empty
@@ -32,7 +34,10 @@ export default function CreateNewSJ() {
     loadingDate: '',
     originDepot: '',
     destination: '',
+    destinationAddress: '',
     clientName: '',
+    contactPerson: '',
+    contactPhone: '',
   });
 
   // Cargo Items
@@ -50,9 +55,9 @@ export default function CreateNewSJ() {
   // F-SJ-02: Cash Advance State
   const [isCashAdvanceOpen, setIsCashAdvanceOpen] = useState(false);
   const [cashAdvance, setCashAdvance] = useState({
-    uangJalan: { nominal: '', recipient: '', signed: false },
+    uangJalan: { nominal: '', recipient: '' },
     danaCadangan: { nominal: '' },
-    status: 'pending', // pending, approved
+    status: 'pending',
   });
 
   // F-SJ-03: Photo Muatan State
@@ -185,6 +190,8 @@ export default function CreateNewSJ() {
           ? `${sjNumber} disimpan & notifikasi WA sudah dikirim ke ${selectedDriver.name}.`
           : `${sjNumber} telah disimpan.`,
       });
+      // Redirect to SJ list after 1.5s
+      setTimeout(() => navigate('/sj'), 1500);
     } catch (error) {
       console.error('Submit error:', error);
       addNotification({
@@ -256,48 +263,102 @@ export default function CreateNewSJ() {
                 <span className="material-symbols-outlined text-primary">description</span>
                 Informasi Umum
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Loading Date *</label>
-                  <input
-                    type="date"
-                    value={formData.loadingDate}
-                    onChange={(e) => setFormData({...formData, loadingDate: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
+
+              <div className="space-y-6">
+                {/* Baris 1: Loading Date & Depot */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Loading Date *</label>
+                    <input
+                      type="date"
+                      value={formData.loadingDate}
+                      onChange={(e) => setFormData({...formData, loadingDate: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Depot Asal</label>
+                    <select
+                      value={formData.originDepot}
+                      onChange={(e) => setFormData({...formData, originDepot: e.target.value})}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                    >
+                      <option value="">-- Pilih Depot --</option>
+                      <option>Warehouse A - Jakarta Timur</option>
+                      <option>Warehouse B - Cikarang</option>
+                      <option>Warehouse C - Surabaya</option>
+                    </select>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Depot Asal</label>
-                  <select
-                    value={formData.originDepot}
-                    onChange={(e) => setFormData({...formData, originDepot: e.target.value})}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  >
-                    <option value="">-- Pilih Depot --</option>
-                    <option>Warehouse A - Jakarta Timur</option>
-                    <option>Warehouse B - Cikarang</option>
-                    <option>Warehouse C - Surabaya</option>
-                  </select>
+
+                {/* Baris 2: Info Tujuan */}
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+                  <h4 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-tertiary text-[18px]">location_on</span>
+                    Info Tujuan
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lokasi / Site Tujuan *</label>
+                      <input
+                        type="text"
+                        value={formData.destination}
+                        onChange={(e) => setFormData({...formData, destination: e.target.value})}
+                        placeholder="Contoh: PT. Indofood Sukses Makmur"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Alamat Lengkap</label>
+                      <input
+                        type="text"
+                        value={formData.destinationAddress}
+                        onChange={(e) => setFormData({...formData, destinationAddress: e.target.value})}
+                        placeholder="Jl. Raya Industri No. xx, Kawasan Industri xxx"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tujuan *</label>
-                  <input
-                    type="text"
-                    value={formData.destination}
-                    onChange={(e) => setFormData({...formData, destination: e.target.value})}
-                    placeholder="Contoh: PT. Indofood Sukses Makmur"
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Klien *</label>
-                  <input
-                    type="text"
-                    value={formData.clientName}
-                    onChange={(e) => setFormData({...formData, clientName: e.target.value})}
-                    placeholder="Nama perusahaan kontak"
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
+
+                {/* Baris 3: Info Klien */}
+                <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
+                  <h4 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-tertiary text-[18px]">business</span>
+                    Info Klien
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Klien / Perusahaan *</label>
+                      <input
+                        type="text"
+                        value={formData.clientName}
+                        onChange={(e) => setFormData({...formData, clientName: e.target.value})}
+                        placeholder="Nama perusahaan"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Contact Person</label>
+                      <input
+                        type="text"
+                        value={formData.contactPerson}
+                        onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                        placeholder="Nama PIC"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Telepon</label>
+                      <input
+                        type="tel"
+                        value={formData.contactPhone}
+                        onChange={(e) => setFormData({...formData, contactPhone: e.target.value})}
+                        placeholder="08xxxxxxxxxx"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </section>
@@ -413,16 +474,6 @@ export default function CreateNewSJ() {
                       </select>
                     </div>
                   </div>
-                  <div className="mt-4 flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id="uj_signed"
-                      checked={cashAdvance.uangJalan.signed}
-                      onChange={(e) => setCashAdvance({...cashAdvance, uangJalan: {...cashAdvance.uangJalan, signed: e.target.checked}})}
-                      className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary"
-                    />
-                    <label htmlFor="uj_signed" className="text-sm text-slate-600 dark:text-slate-300">Penerima sudah menandatangani (digital) penerimaan uang jalan</label>
-                  </div>
                 </div>
 
                 {/* Dana Cadangan Perbaikan */}
@@ -486,35 +537,134 @@ export default function CreateNewSJ() {
                 Review & Submit
               </h3>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+              <div className="space-y-6">
+                {/* Header - Nomor SJ */}
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nomor SJ</p>
-                  <p className="text-lg font-mono font-bold text-primary">{sjNumber}</p>
+                  <p className="text-xl font-mono font-bold text-primary">{sjNumber}</p>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Tujuan</p>
-                    <p className="text-sm font-bold text-on-surface">{formData.destination}</p>
+
+                {/* Info Umum */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">info</span>
+                    Informasi Umum
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Tanggal</p>
+                      <p className="text-sm font-medium">{formData.loadingDate || '-'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Depot Asal</p>
+                      <p className="text-sm font-medium">{formData.originDepot || '-'}</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Klien</p>
-                    <p className="text-sm font-bold text-on-surface">{formData.clientName}</p>
+                </div>
+
+                {/* Info Tujuan */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">location_on</span>
+                    Info Tujuan
+                  </h4>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Lokasi / Site</p>
+                      <p className="text-sm font-medium">{formData.destination || '-'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Alamat</p>
+                      <p className="text-sm font-medium">{formData.destinationAddress || '-'}</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Jumlah Item</p>
-                    <p className="text-sm font-bold text-on-surface">{items.length} item ({totalQty} unit)</p>
+                </div>
+
+                {/* Info Klien */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">business</span>
+                    Info Klien
+                  </h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Perusahaan</p>
+                      <p className="text-sm font-medium">{formData.clientName || '-'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">Contact Person</p>
+                      <p className="text-sm font-medium">{formData.contactPerson || '-'}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase">No. Telepon</p>
+                      <p className="text-sm font-medium">{formData.contactPhone || '-'}</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Total Berat</p>
-                    <p className="text-sm font-bold text-on-surface">{totalWeightTon} Tons</p>
+                </div>
+
+                {/* Cargo */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+                    Cargo Manifest
+                  </h4>
+                  <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="bg-slate-100 dark:bg-slate-800">
+                        <tr className="text-slate-500">
+                          <th className="p-3 font-bold uppercase">SKU</th>
+                          <th className="p-3 font-bold uppercase">Material</th>
+                          <th className="p-3 font-bold uppercase text-right">Qty</th>
+                          <th className="p-3 font-bold uppercase text-right">Berat</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {items.map((item) => (
+                          <tr key={item.id}>
+                            <td className="p-3 font-mono">{item.sku}</td>
+                            <td className="p-3">{item.name}</td>
+                            <td className="p-3 text-right font-medium">{item.qty} {item.unit}</td>
+                            <td className="p-3 text-right font-medium">{Number(item.weight).toLocaleString()} kg</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Uang Jalan</p>
-                    <p className="text-sm font-bold text-on-surface">Rp {Number(cashAdvance.uangJalan.nominal).toLocaleString()}</p>
+                  <div className="flex justify-end">
+                    <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                      <p className="text-xs font-bold text-slate-500 uppercase">Total Berat</p>
+                      <p className="text-lg font-bold text-primary">{totalWeightTon} Tons</p>
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Foto Muatan</p>
-                    <p className="text-sm font-bold text-on-surface">{muatanPhotos.length} foto</p>
+                </div>
+
+                {/* Cash Advance */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">payments</span>
+                    Cash Advance
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                      <p className="text-[10px] font-bold text-amber-600 uppercase">Uang Jalan</p>
+                      <p className="text-sm font-bold text-amber-700">Rp {Number(cashAdvance.uangJalan.nominal || 0).toLocaleString()}</p>
+                      <p className="text-xs text-slate-500 mt-1">Penerima: {cashAdvance.uangJalan.recipient || '-'}</p>
+                    </div>
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <p className="text-[10px] font-bold text-blue-600 uppercase">Dana Cadangan</p>
+                      <p className="text-sm font-bold text-blue-700">Rp {Number(cashAdvance.danaCadangan.nominal || 0).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Foto Muatan */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px]">photo_library</span>
+                    Foto Muatan
+                  </h4>
+                  <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg">
+                    <p className="text-sm font-medium">{muatanPhotos.length} foto diupload</p>
                   </div>
                 </div>
               </div>

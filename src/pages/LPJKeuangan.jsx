@@ -233,7 +233,7 @@ export default function LPJKeuangan() {
       </header>
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="max-w-5xl mx-auto space-y-8 pb-32">
+        <div className="max-w-5xl mx-auto space-y-8 pb-36">
 
           {/* Section 1: Select SJ */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -528,7 +528,7 @@ export default function LPJKeuangan() {
       </div>
 
       {/* Footer Action Bar */}
-      <div className="absolute bottom-0 left-0 w-full z-40">
+      <div className="sticky bottom-0 left-0 w-full z-40 flex-shrink-0">
         <div className="backdrop-blur-xl bg-white/90 dark:bg-slate-900/90 border-t border-outline-variant/30 px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
           <div className="flex items-center gap-4">
             {canSubmit ? (

@@ -204,9 +204,19 @@ function fleetOpsReducer(state, action) {
     case 'CUSTOMERS_SET':
       return { ...state, customers: action.payload };
 
+    case 'CUSTOMER_ADD':
+      return { ...state, customers: [action.payload, ...state.customers] };
+
     // Material Actions
     case 'MATERIALS_SET':
       return { ...state, materials: action.payload };
+
+    case 'MATERIAL_ADD':
+      return { ...state, materials: [action.payload, ...state.materials] };
+
+    // User Actions
+    case 'USER_ADD':
+      return { ...state, drivers: [action.payload, ...state.drivers] };
 
     // SJ Actions
     case 'SJ_SET':
@@ -330,9 +340,17 @@ export function FleetOpsProvider({ children }) {
 
     // Customer Actions
     setCustomers: (data) => dispatch({ type: 'CUSTOMERS_SET', payload: data }),
+    addCustomer: (data) => dispatch({ type: 'CUSTOMER_ADD', payload: data }),
 
     // Material Actions
     setMaterials: (data) => dispatch({ type: 'MATERIALS_SET', payload: data }),
+    addMaterial: (data) => dispatch({ type: 'MATERIAL_ADD', payload: data }),
+
+    // User Actions
+    addUser: (data) => dispatch({ type: 'USER_ADD', payload: data }),
+
+    // Vehicle Actions (alias for fleet)
+    addVehicle: (data) => dispatch({ type: 'FLEET_ADD', payload: data }),
 
     // Dispatch Actions
     setDispatches: (data) => dispatch({ type: 'DISPATCHES_SET', payload: data }),

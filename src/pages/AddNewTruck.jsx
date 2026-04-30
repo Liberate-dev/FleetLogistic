@@ -1,27 +1,112 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 import Layout from '../components/Layout';
+import { useFleetOps } from '../context';
 
 export default function AddNewTruck() {
+  const navigate = useNavigate();
+  const { addVehicle, setLoading, addNotification } = useFleetOps();
+
+  const [formData, setFormData] = useState({
+    assetName: '',
+    vinNumber: '',
+    makeModel: '',
+    productionYear: new Date().getFullYear(),
+    maxPayload: 45000,
+    fuelCapacity: 200,
+    engineType: 'Diesel-Turbo',
+    hasGps: true,
+    hasColdChain: false,
+    status: 'READY',
+  });
+
+  const [activeTab, setActiveTab] = useState('registration');
+
+  const handleChange = (field, value) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.assetName || !formData.vinNumber || !formData.makeModel) {
+      addNotification({
+        type: 'error',
+        title: 'Form Tidak Lengkap',
+        message: 'Mohon isi field yang wajib diisi.',
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const truckData = {
+        ...formData,
+        id: `TRK-${Date.now()}`,
+        plate: formData.assetName,
+        type: formData.makeModel,
+        capacity: formData.maxPayload / 1000,
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString(),
+      };
+
+      await addVehicle(truckData);
+
+      addNotification({
+        type: 'success',
+        title: 'Truck Berhasil Ditambahkan',
+        message: `${formData.assetName} telah didaftarkan.`,
+      });
+
+      setTimeout(() => navigate('/fleet'), 1500);
+    } catch (error) {
+      addNotification({
+        type: 'error',
+        title: 'Gagal Menambahkan Truck',
+        message: error.message || 'Terjadi kesalahan.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const tabs = [
+    { id: 'registration', label: 'Registration', icon: 'description' },
+    { id: 'compliance', label: 'Compliance', icon: 'verified_user' },
+    { id: 'assignment', label: 'Assignment', icon: 'assignment' },
+  ];
+
   return (
     <Layout>
       <TopNavBar title="Add New Truck" breadcrumbs={['Fleet', 'Add New Truck']} />
-      
+
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-8">
-          
+
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-            <div className="space-y-1 block md:hidden">
-              <h2 className="text-4xl font-extrabold font-headline tracking-tight">Add New Truck</h2>
+            <div>
+              <h2 className="text-3xl font-extrabold font-headline tracking-tight">Add New Truck</h2>
             </div>
-            {/* Tabs extracted from original HTML logic conceptually */}
             <nav className="flex gap-6 items-center flex-1">
-              <a href="#" className="text-emerald-700 dark:text-emerald-400 border-b-2 border-emerald-700 dark:border-emerald-400 h-10 flex items-center font-manrope text-sm font-bold">Registration</a>
-              <a href="#" className="text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 border-b-2 border-transparent h-10 flex items-center font-manrope text-sm font-medium transition-colors">Compliance</a>
-              <a href="#" className="text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 border-b-2 border-transparent h-10 flex items-center font-manrope text-sm font-medium transition-colors">Assignment</a>
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`h-10 flex items-center font-manrope text-sm font-bold border-b-2 transition-colors ${
+                    activeTab === tab.id
+                      ? 'text-emerald-700 dark:text-emerald-400 border-emerald-700 dark:border-emerald-400'
+                      : 'text-slate-500 border-transparent hover:text-emerald-600'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px] mr-1">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
             </nav>
             <div className="flex items-center gap-3">
-              <button className="bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl font-manrope text-sm font-bold shadow-lg shadow-primary/20 hover:shadow-primary/40 focus:ring-2 focus:ring-primary/50 transition-all transform hover:-translate-y-1 flex items-center gap-2 micro-hover">
+              <button
+                onClick={handleSubmit}
+                className="bg-gradient-to-r from-primary to-primary-container text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-lg flex items-center gap-2 hover:shadow-xl transition-all"
+              >
                 <span className="material-symbols-outlined text-sm">save</span>
                 Publish Asset
               </button>
@@ -29,192 +114,235 @@ export default function AddNewTruck() {
           </div>
 
           <div className="grid grid-cols-12 gap-8">
-            
-            {/* Form Column */}
-            <div className="col-span-12 md:col-span-8 flex flex-col gap-8 animate-slide-up">
-              
-              <section className="glass-panel rounded-2xl p-8 group hover:border-primary/30 transition-all shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-1.5 h-8 bg-primary rounded-full"></div>
-                  <h2 className="text-2xl font-headline font-bold">Vehicle Identity</h2>
-                </div>
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Asset Name</label>
-                    <input type="text" placeholder="e.g. Heavy Hauler 01" className="bg-surface-container-low dark:bg-slate-800/50 border-none rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary shadow-inner" />
-                  </div>
-                  <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">VIN Number</label>
-                    <input type="text" placeholder="17-digit Identifier" className="bg-surface-container-low dark:bg-slate-800/50 border-none rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary shadow-inner" />
-                  </div>
-                  <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Make / Model</label>
-                    <select className="bg-surface-container-low dark:bg-slate-800/50 border-none rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary shadow-inner">
-                      <option>Select Manufacturer</option>
-                      <option>Freightliner Cascadia</option>
-                      <option>Volvo FH16</option>
-                      <option>Peterbilt 579</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2 md:col-span-1 flex flex-col gap-2">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Production Year</label>
-                    <input type="number" placeholder="2024" className="bg-surface-container-low dark:bg-slate-800/50 border-none rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary shadow-inner" />
-                  </div>
-                </div>
-              </section>
+            <div className="col-span-12 lg:col-span-8 flex flex-col gap-8">
+              {activeTab === 'registration' && (
+                <>
+                  <section className="glass-panel rounded-2xl p-8 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-1.5 h-8 bg-primary rounded-full"></div>
+                      <h2 className="text-xl font-bold font-headline">Vehicle Identity</h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Asset Name *</label>
+                        <input
+                          type="text"
+                          value={formData.assetName}
+                          onChange={(e) => handleChange('assetName', e.target.value)}
+                          placeholder="e.g. Heavy Hauler 01"
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">VIN Number *</label>
+                        <input
+                          type="text"
+                          value={formData.vinNumber}
+                          onChange={(e) => handleChange('vinNumber', e.target.value)}
+                          placeholder="17-digit Identifier"
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Make / Model *</label>
+                        <select
+                          value={formData.makeModel}
+                          onChange={(e) => handleChange('makeModel', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                        >
+                          <option value="">Select Manufacturer</option>
+                          <option>Freightliner Cascadia</option>
+                          <option>Volvo FH16</option>
+                          <option>Peterbilt 579</option>
+                          <option>Hino 500</option>
+                          <option>Isuzu Giga</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-500 uppercase">Production Year</label>
+                        <input
+                          type="number"
+                          value={formData.productionYear}
+                          onChange={(e) => handleChange('productionYear', parseInt(e.target.value))}
+                          className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </section>
 
-              <section className="glass-panel rounded-2xl p-8 group hover:border-secondary/30 transition-all shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-1.5 h-8 bg-secondary rounded-full"></div>
-                  <h2 className="text-2xl font-headline font-bold">Technical Details</h2>
-                </div>
-                <div className="grid grid-cols-3 gap-6">
-                  <div className="col-span-3 lg:col-span-1 flex flex-col gap-4 p-5 bg-surface-container-low dark:bg-slate-800/50 rounded-2xl shadow-inner border border-slate-100 dark:border-slate-800">
-                    <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-secondary">
-                      <span className="material-symbols-outlined">speed</span>
+                  <section className="glass-panel rounded-2xl p-8 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-1.5 h-8 bg-secondary rounded-full"></div>
+                      <h2 className="text-xl font-bold font-headline">Technical Details</h2>
                     </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Max Payload</label>
-                      <div className="flex items-end gap-2 mt-1">
-                        <input type="text" defaultValue="45,000" className="bg-transparent border-b border-slate-300 dark:border-slate-600 w-20 text-lg font-bold p-0 focus:ring-0 focus:border-secondary text-on-surface" />
-                        <span className="text-xs font-medium text-slate-400 pb-1">LBS</span>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Max Payload (LBS)</label>
+                        <input
+                          type="number"
+                          value={formData.maxPayload}
+                          onChange={(e) => handleChange('maxPayload', parseInt(e.target.value))}
+                          className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 py-1 text-lg font-bold focus:ring-0 focus:border-secondary"
+                        />
                       </div>
-                    </div>
-                  </div>
-                  <div className="col-span-3 lg:col-span-1 flex flex-col gap-4 p-5 bg-surface-container-low dark:bg-slate-800/50 rounded-2xl shadow-inner border border-slate-100 dark:border-slate-800">
-                    <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-secondary">
-                      <span className="material-symbols-outlined">oil_barrel</span>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Fuel Capacity</label>
-                      <div className="flex items-end gap-2 mt-1">
-                        <input type="text" defaultValue="200" className="bg-transparent border-b border-slate-300 dark:border-slate-600 w-20 text-lg font-bold p-0 focus:ring-0 focus:border-secondary text-on-surface" />
-                        <span className="text-xs font-medium text-slate-400 pb-1">GAL</span>
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Fuel Capacity (GAL)</label>
+                        <input
+                          type="number"
+                          value={formData.fuelCapacity}
+                          onChange={(e) => handleChange('fuelCapacity', parseInt(e.target.value))}
+                          className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 py-1 text-lg font-bold focus:ring-0 focus:border-secondary"
+                        />
                       </div>
-                    </div>
-                  </div>
-                  <div className="col-span-3 lg:col-span-1 flex flex-col gap-4 p-5 bg-surface-container-low dark:bg-slate-800/50 rounded-2xl shadow-inner border border-slate-100 dark:border-slate-800">
-                    <div className="w-10 h-10 rounded-full bg-white dark:bg-slate-900 shadow-sm flex items-center justify-center text-secondary">
-                      <span className="material-symbols-outlined">settings_input_component</span>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase">Engine Type</label>
-                      <div className="flex items-end gap-2 mt-1">
-                        <select className="bg-transparent border-b border-slate-300 dark:border-slate-600 w-full text-sm font-bold p-0 focus:ring-0 focus:border-secondary text-on-surface">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <label className="text-xs font-bold text-slate-500 uppercase block mb-2">Engine Type</label>
+                        <select
+                          value={formData.engineType}
+                          onChange={(e) => handleChange('engineType', e.target.value)}
+                          className="w-full bg-transparent border-b border-slate-300 dark:border-slate-600 py-1 text-sm font-bold focus:ring-0 focus:border-secondary"
+                        >
                           <option>Diesel-Turbo</option>
                           <option>Electric-EV</option>
                           <option>LNG Hybrid</option>
                         </select>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                <div className="mt-8 flex flex-col gap-4">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">On-Board Telemetry</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex items-center gap-4 p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-primary/40 transition-all shadow-sm">
-                      <input type="checkbox" defaultChecked className="rounded border-slate-300 text-primary focus:ring-primary w-5 h-5" />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold">GPS Real-time Tracking</span>
-                        <span className="text-xs text-slate-500 mt-0.5">Active positioning every 5s</span>
+                    <div className="mt-6 space-y-3">
+                      <label className="text-xs font-bold text-slate-500 uppercase">On-Board Telemetry</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="flex items-center gap-4 p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-primary/40 transition-all">
+                          <input
+                            type="checkbox"
+                            checked={formData.hasGps}
+                            onChange={(e) => handleChange('hasGps', e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <span className="text-sm font-bold block">GPS Real-time Tracking</span>
+                            <span className="text-xs text-slate-500">Active positioning every 5s</span>
+                          </div>
+                        </label>
+                        <label className="flex items-center gap-4 p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:border-primary/40 transition-all">
+                          <input
+                            type="checkbox"
+                            checked={formData.hasColdChain}
+                            onChange={(e) => handleChange('hasColdChain', e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary"
+                          />
+                          <div>
+                            <span className="text-sm font-bold block">Cold-Chain Sensors</span>
+                            <span className="text-xs text-slate-500">Integrated thermal monitoring</span>
+                          </div>
+                        </label>
                       </div>
-                    </label>
-                    <label className="flex items-center gap-4 p-4 border-2 border-slate-200 dark:border-slate-700 rounded-xl cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:border-primary/40 transition-all shadow-sm">
-                      <input type="checkbox" className="rounded border-slate-300 text-primary focus:ring-primary w-5 h-5" />
-                      <div className="flex flex-col">
-                        <span className="text-sm font-bold">Cold-Chain Sensors</span>
-                        <span className="text-xs text-slate-500 mt-0.5">Integrated thermal monitoring</span>
+                    </div>
+                  </section>
+
+                  <section className="glass-panel rounded-2xl p-8 shadow-sm">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="w-1.5 h-8 bg-tertiary rounded-full"></div>
+                      <h2 className="text-xl font-bold font-headline">Asset Readiness</h2>
+                    </div>
+                    <div className="space-y-4">
+                      <label className="text-xs font-bold text-slate-500 uppercase block">Current Status</label>
+                      <div className="flex flex-wrap gap-3">
+                        {['READY', 'IN_MAINTENANCE', 'PENDING'].map(status => (
+                          <button
+                            key={status}
+                            onClick={() => handleChange('status', status)}
+                            className={`px-6 py-2 rounded-full text-xs font-bold border-2 transition-all ${
+                              formData.status === status
+                                ? 'bg-primary-fixed text-on-primary-fixed border-primary shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-transparent hover:border-slate-300'
+                            }`}
+                          >
+                            {status === 'READY' ? 'Ready for Service' : status === 'IN_MAINTENANCE' ? 'In Maintenance' : 'Pending Inspection'}
+                          </button>
+                        ))}
                       </div>
-                    </label>
-                  </div>
-                </div>
-              </section>
-
-              <section className="glass-panel rounded-2xl p-8 group hover:border-tertiary/30 transition-all shadow-sm">
-                <div className="flex items-center gap-3 mb-8">
-                  <div className="w-1.5 h-8 bg-tertiary rounded-full"></div>
-                  <h2 className="text-2xl font-headline font-bold">Asset Readiness</h2>
-                </div>
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="flex flex-col gap-4">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Current Status</label>
-                    <div className="flex flex-wrap gap-3">
-                      <button className="px-6 py-2 rounded-full bg-primary-fixed text-on-primary-fixed text-xs font-bold border-2 border-primary shadow-sm">Ready for Service</button>
-                      <button className="px-6 py-2 rounded-full bg-surface-container-high dark:bg-slate-800 text-slate-500 text-xs font-bold border-2 border-transparent">In Maintenance</button>
-                      <button className="px-6 py-2 rounded-full bg-surface-container-high dark:bg-slate-800 text-slate-500 text-xs font-bold border-2 border-transparent">Pending Inspection</button>
-                      <button className="px-6 py-2 rounded-full bg-surface-container-high dark:bg-slate-800 text-slate-500 text-xs font-bold border-2 border-transparent">Decommissioned</button>
                     </div>
-                  </div>
-                  <div className="p-8 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl flex flex-col items-center justify-center gap-3 text-center group-hover:border-primary/50 bg-slate-50/50 dark:bg-slate-800/20 transition-colors cursor-pointer mt-4">
-                    <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-900 shadow-md flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <span className="material-symbols-outlined text-3xl text-slate-400 group-hover:text-primary">cloud_upload</span>
-                    </div>
-                    <p className="text-sm font-bold text-slate-700 dark:text-slate-200">Upload Vehicle Documents</p>
-                    <p className="text-xs text-slate-500 max-w-sm">PDF, JPG, or PNG (Max 10MB). Upload Registration, Insurance, and Inspection logs.</p>
-                  </div>
-                </div>
-              </section>
+                  </section>
+                </>
+              )}
 
+              {activeTab === 'compliance' && (
+                <section className="glass-panel rounded-2xl p-8 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-1.5 h-8 bg-tertiary rounded-full"></div>
+                    <h2 className="text-xl font-bold font-headline">Compliance Documents</h2>
+                  </div>
+                  <div className="text-center py-12 text-slate-400">
+                    <span className="material-symbols-outlined text-5xl mb-3">construction</span>
+                    <p className="text-sm">Compliance section coming soon</p>
+                  </div>
+                </section>
+              )}
+
+              {activeTab === 'assignment' && (
+                <section className="glass-panel rounded-2xl p-8 shadow-sm">
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="w-1.5 h-8 bg-tertiary rounded-full"></div>
+                    <h2 className="text-xl font-bold font-headline">Assignment</h2>
+                  </div>
+                  <div className="text-center py-12 text-slate-400">
+                    <span className="material-symbols-outlined text-5xl mb-3">construction</span>
+                    <p className="text-sm">Assignment section coming soon</p>
+                  </div>
+                </section>
+              )}
             </div>
 
-            {/* Right Sidebar: Contextual Help & Summary */}
-            <div className="col-span-12 md:col-span-4">
-              <div className="sticky top-24 flex flex-col gap-6 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+            <div className="col-span-12 lg:col-span-4">
+              <div className="sticky top-24 space-y-6">
                 <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50">
-                  <div className="h-40 relative">
-                    <img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7" alt="Preview" className="w-full h-full object-cover opacity-90" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent"></div>
-                    <div className="absolute bottom-4 left-4">
-                      <span className="bg-primary px-2.5 py-1 rounded-md text-[10px] font-bold text-white uppercase tracking-widest shadow-md">Live Preview</span>
-                    </div>
+                  <div className="h-40 bg-gradient-to-br from-primary to-primary-container flex items-center justify-center">
+                    <span className="material-symbols-outlined text-6xl text-white/50">local_shipping</span>
                   </div>
                   <div className="p-6 bg-white dark:bg-slate-900">
-                    <h3 className="text-xl font-bold font-headline text-on-surface mb-1">New Fleet Asset</h3>
-                    <p className="text-xs text-slate-500 mb-5 font-medium flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Draft status • Not yet assigned
-                    </p>
+                    <h3 className="text-xl font-bold font-headline mb-1">New Fleet Asset</h3>
+                    <p className="text-xs text-slate-500 mb-4">Draft status - Not yet published</p>
                     <div className="space-y-3">
-                      <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
-                        <span className="text-xs font-semibold text-slate-500">Asset Type</span>
-                        <span className="text-xs font-bold text-emerald-800 dark:text-emerald-400">Class 8 Heavy Duty</span>
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-xs text-slate-500">Asset Type</span>
+                        <span className="text-xs font-bold text-emerald-800">{formData.makeModel || '-'}</span>
                       </div>
-                      <div className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800">
-                        <span className="text-xs font-semibold text-slate-500">Telemetry</span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
-                          <span className="text-xs font-bold text-emerald-800 dark:text-emerald-400">Enabled</span>
-                        </div>
+                      <div className="flex justify-between items-center py-2 border-b border-slate-100">
+                        <span className="text-xs text-slate-500">Telemetry</span>
+                        <span className={`text-xs font-bold ${formData.hasGps ? 'text-emerald-800' : 'text-slate-400'}`}>
+                          {formData.hasGps ? 'Enabled' : 'Disabled'}
+                        </span>
                       </div>
-                      <div className="flex justify-between items-center py-2.5">
-                        <span className="text-xs font-semibold text-slate-500">Owner Entity</span>
-                        <span className="text-xs font-bold text-emerald-800 dark:text-emerald-400">Global Logistics Corp</span>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs text-slate-500">VIN</span>
+                        <span className="text-xs font-mono">{formData.vinNumber || '-'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-amber-50 dark:bg-amber-900/20 text-amber-900 dark:text-amber-200 rounded-2xl p-6 relative overflow-hidden border border-amber-200 dark:border-amber-900/50 shadow-sm">
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-3">
-                      <span className="material-symbols-outlined text-lg">info</span>
-                      <span className="text-xs font-black uppercase tracking-widest">Compliance Tip</span>
-                    </div>
-                    <p className="text-sm leading-relaxed opacity-90">
-                      Ensure the VIN matches the physical plate on the door frame. Incorrect registration can lead to regulatory delays during state-line crossings.
-                    </p>
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-2xl p-6 border border-amber-200 dark:border-amber-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="material-symbols-outlined text-amber-600">info</span>
+                    <span className="text-xs font-bold text-amber-800 uppercase">Tip</span>
                   </div>
-                  <span className="material-symbols-outlined absolute -bottom-6 -right-6 text-9xl opacity-[0.03]">verified</span>
+                  <p className="text-sm text-amber-800">
+                    Pastikan VIN cocok dengan plat fisik di frame pintu. Registrasi yang salah bisa menyebabkan keterlambatan regulasi.
+                  </p>
                 </div>
 
-                <div className="flex flex-col gap-3 mt-4">
-                  <button className="w-full py-4 bg-primary text-white rounded-xl font-bold text-sm shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">
-                    Validate & Finalize
-                  </button>
-                  <button className="w-full py-4 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all shadow-sm">
-                    Save as Draft
-                  </button>
-                </div>
+                <button
+                  onClick={handleSubmit}
+                  className="w-full py-4 bg-primary text-white rounded-xl font-bold text-sm shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
+                >
+                  Validate & Finalize
+                </button>
+                <button
+                  onClick={() => navigate('/fleet')}
+                  className="w-full py-3 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                >
+                  Cancel
+                </button>
               </div>
             </div>
           </div>

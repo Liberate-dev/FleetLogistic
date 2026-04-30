@@ -50,6 +50,47 @@ export default function SJIndex() {
     });
   };
 
+  const handleCancelSJ = async (id) => {
+    if (!window.confirm('Yakin batalkan SJ ini?')) return;
+    setSuratJalan(suratJalan.map(sj => sj.id === id ? { ...sj, status: 'CANCELLED' } : sj));
+    try {
+      await fetch(`/api/surat-jalan/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CANCELLED' }),
+      });
+    } catch (err) {
+      console.error('Cancel failed:', err);
+      fetchSuratJalan();
+    }
+  };
+
+  const handleReturnSJ = async (id) => {
+    if (!window.confirm('Kembalikan SJ ini ke status aktif?')) return;
+    setSuratJalan(suratJalan.map(sj => sj.id === id ? { ...sj, status: 'DRAFT' } : sj));
+    try {
+      await fetch(`/api/surat-jalan/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'DRAFT' }),
+      });
+    } catch (err) {
+      console.error('Return failed:', err);
+      fetchSuratJalan();
+    }
+  };
+
+  const handleDeleteSJ = async (id) => {
+    if (!window.confirm('Yakin hapus permanen SJ ini?')) return;
+    setSuratJalan(suratJalan.filter(sj => sj.id !== id));
+    try {
+      await fetch(`/api/surat-jalan/${id}`, { method: 'DELETE' });
+    } catch (err) {
+      console.error('Delete failed:', err);
+      fetchSuratJalan();
+    }
+  };
+
   return (
     <Layout>
       <TopNavBar title="Surat Jalan (Manifests)" breadcrumbs={['Operations', 'Surat Jalan']} />
@@ -87,8 +128,8 @@ export default function SJIndex() {
                     <th className="py-4 px-6 font-bold uppercase text-xs">Client</th>
                     <th className="py-4 px-6 font-bold uppercase text-xs">Items</th>
                     <th className="py-4 px-6 font-bold uppercase text-xs">Photo</th>
-                    <th className="py-4 px-6 font-bold uppercase text-xs">TTD</th>
                     <th className="py-4 px-6 font-bold uppercase text-xs">Status</th>
+                    <th className="py-4 px-6 font-bold uppercase text-xs text-center">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -112,22 +153,46 @@ export default function SJIndex() {
                         )}
                       </td>
                       <td className="py-4 px-6">
-                        {item.signatureConfirmed ? (
-                          <span className="flex items-center gap-1 text-emerald-600">
-                            <span className="material-symbols-outlined text-[16px]">verified</span>
-                            <span className="text-xs">OK</span>
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-slate-400">
-                            <span className="material-symbols-outlined text-[16px]">draw</span>
-                            <span className="text-xs">-</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-4 px-6">
                         <span className={`px-2 py-1 text-[10px] uppercase font-bold rounded-md ${getStatusBadge(item.status)}`}>
                           {item.status}
                         </span>
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        {item.status === 'CANCELLED' ? (
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleReturnSJ(item.id);
+                              }}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-blue-600 hover:bg-blue-50 transition-colors"
+                              title="Return"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">undo</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSJ(item.id);
+                              }}
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-error hover:bg-error/10 transition-colors"
+                              title="Hapus Permanen"
+                            >
+                              <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelSJ(item.id);
+                            }}
+                            className="w-8 h-8 rounded-lg flex items-center justify-center text-amber-600 hover:bg-amber-50 border border-amber-200 transition-colors"
+                            title="Batalkan SJ"
+                          >
+                            <span className="material-symbols-outlined text-[18px]">cancel</span>
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -144,82 +209,165 @@ export default function SJIndex() {
             size="lg"
           >
             {selectedSJ && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="space-y-6">
+
+                {/* Header Status */}
+                <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
                   <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Client</label>
-                    <p className="font-semibold">{selectedSJ.customer?.name || '-'}</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Tanggal</p>
+                    <p className="text-sm font-semibold">{formatDate(selectedSJ.date)}</p>
                   </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Status</label>
-                    <p className={`font-semibold ${
-                      selectedSJ.status === 'COMPLETED' ? 'text-emerald-600' :
-                      selectedSJ.status === 'CANCELLED' ? 'text-red-600' : 'text-blue-600'
-                    }`}>{selectedSJ.status}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Date</label>
-                    <p className="font-semibold">{formatDate(selectedSJ.date)}</p>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Items</label>
-                    <p className="font-semibold">{selectedSJ.items?.length || 0} items</p>
+                  <div className="text-right">
+                    <p className="text-[10px] font-bold text-slate-500 uppercase">Status</p>
+                    <span className={`inline-block px-3 py-1 text-xs font-bold rounded-full ${
+                      selectedSJ.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
+                      selectedSJ.status === 'CANCELLED' ? 'bg-red-100 text-red-600' :
+                      'bg-blue-100 text-blue-700'
+                    }`}>
+                      {selectedSJ.status}
+                    </span>
                   </div>
                 </div>
 
-                {selectedSJ.notes && (
-                  <div>
-                    <label className="text-xs font-bold text-slate-500 uppercase">Notes</label>
-                    <p className="text-sm">{selectedSJ.notes}</p>
+                {/* Info Tujuan */}
+                {selectedSJ.destination && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">location_on</span>
+                      Info Tujuan
+                    </h4>
+                    <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase">Lokasi / Site</p>
+                        <p className="text-sm font-semibold">{selectedSJ.destination}</p>
+                      </div>
+                      {selectedSJ.destinationAddress && (
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase">Alamat</p>
+                          <p className="text-sm">{selectedSJ.destinationAddress}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-bold text-slate-700 mb-3">Photo & Signature</h4>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
-                        Photo Muatan
-                        {selectedSJ.photoReceived ? (
-                          <span className="material-symbols-outlined text-emerald-600 text-[14px]">check_circle</span>
-                        ) : (
-                          <span className="material-symbols-outlined text-slate-400 text-[14px]">radio_button_unchecked</span>
-                        )}
-                      </label>
-                      {selectedSJ.photoUrl ? (
-                        <div className="mt-2">
-                          <img
-                            src={selectedSJ.photoUrl}
-                            alt="Photo muatan"
-                            className="max-w-full rounded-lg border"
-                            onError={(e) => {
-                              e.target.style.display = 'none';
-                              e.target.nextSibling.style.display = 'block';
-                            }}
-                          />
-                          <div className="hidden text-xs text-slate-500 mt-1">
-                            Image URL: {selectedSJ.photoUrl}
-                          </div>
+                {/* Info Klien */}
+                {selectedSJ.clientName && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">business</span>
+                      Info Klien
+                    </h4>
+                    <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <p className="text-[10px] text-slate-400 uppercase">Perusahaan</p>
+                      <p className="text-sm font-semibold">{selectedSJ.clientName}</p>
+                      {selectedSJ.contactPerson && (
+                        <div className="mt-2 pt-2 border-t border-slate-100">
+                          <p className="text-[10px] text-slate-400 uppercase">Contact Person</p>
+                          <p className="text-sm">{selectedSJ.contactPerson}</p>
+                          {selectedSJ.contactPhone && (
+                            <p className="text-xs text-slate-500">{selectedSJ.contactPhone}</p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-sm text-slate-400 mt-1">No photo received</p>
                       )}
                     </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
-                        TTD Confirmation
-                        {selectedSJ.signatureConfirmed ? (
-                          <span className="material-symbols-outlined text-emerald-600 text-[14px]">verified</span>
-                        ) : (
-                          <span className="material-symbols-outlined text-slate-400 text-[14px]">radio_button_unchecked</span>
-                        )}
-                      </label>
-                      <p className={`text-sm mt-1 ${selectedSJ.signatureConfirmed ? 'text-emerald-600' : 'text-slate-400'}`}>
-                        {selectedSJ.signatureConfirmed ? 'Driver confirmed receipt' : 'Pending confirmation'}
-                      </p>
+                  </div>
+                )}
+
+                {/* Cargo Manifest */}
+                {selectedSJ.items?.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">inventory_2</span>
+                      Cargo Manifest
+                    </h4>
+                    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-xs border-collapse">
+                        <thead className="bg-slate-50 dark:bg-slate-800">
+                          <tr className="text-slate-500">
+                            <th className="p-3 font-bold uppercase text-left">SKU</th>
+                            <th className="p-3 font-bold uppercase text-left">Material</th>
+                            <th className="p-3 font-bold uppercase text-right">Qty</th>
+                            <th className="p-3 font-bold uppercase text-right">Berat</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                          {selectedSJ.items.map((item, idx) => (
+                            <tr key={idx}>
+                              <td className="p-3 font-mono">{item.sku}</td>
+                              <td className="p-3">{item.name}</td>
+                              <td className="p-3 text-right">{item.qty} {item.unit}</td>
+                              <td className="p-3 text-right">{Number(item.weight).toLocaleString()} kg</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   </div>
+                )}
+
+                {/* Cash Advance */}
+                {(selectedSJ.cashAdvance?.uangJalan?.nominal || selectedSJ.cashAdvance?.danaCadangan?.nominal) && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">payments</span>
+                      Cash Advance
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      {selectedSJ.cashAdvance?.uangJalan?.nominal > 0 && (
+                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+                          <p className="text-[10px] font-bold text-amber-600 uppercase">Uang Jalan</p>
+                          <p className="text-sm font-bold text-amber-700">Rp {Number(selectedSJ.cashAdvance.uangJalan.nominal).toLocaleString()}</p>
+                          {selectedSJ.cashAdvance.uangJalan.recipient && (
+                            <p className="text-xs text-slate-500 mt-1">Penerima: {selectedSJ.cashAdvance.uangJalan.recipient}</p>
+                          )}
+                        </div>
+                      )}
+                      {selectedSJ.cashAdvance?.danaCadangan?.nominal > 0 && (
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                          <p className="text-[10px] font-bold text-blue-600 uppercase">Dana Cadangan</p>
+                          <p className="text-sm font-bold text-blue-700">Rp {Number(selectedSJ.cashAdvance.danaCadangan.nominal).toLocaleString()}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Foto Muatan */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">photo_library</span>
+                    Foto Muatan
+                  </h4>
+                  <div className="p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                    {selectedSJ.photoUrl ? (
+                      <img
+                        src={selectedSJ.photoUrl}
+                        alt="Photo muatan"
+                        className="max-w-full rounded-lg"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                    ) : (
+                      <p className="text-sm text-slate-400">Belum ada foto</p>
+                    )}
+                  </div>
                 </div>
+
+                {/* Notes */}
+                {selectedSJ.notes && (
+                  <div className="space-y-2">
+                    <h4 className="text-xs font-bold text-slate-500 uppercase flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">sticky_note_2</span>
+                      Catatan
+                    </h4>
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+                      <p className="text-sm">{selectedSJ.notes}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </Modal>
