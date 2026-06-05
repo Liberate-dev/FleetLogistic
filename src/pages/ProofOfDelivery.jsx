@@ -247,357 +247,445 @@ export default function ProofOfDelivery() {
       <div className="flex-1 overflow-y-auto relative z-10 animate-fade-in no-scrollbar bg-slate-100 dark:bg-slate-950 sm:bg-slate-50/50 sm:dark:bg-slate-900/50 print:hidden">
         <div className="max-w-5xl mx-auto flex flex-col gap-2 sm:gap-8 pb-36 sm:p-4 md:p-8 pt-2 sm:pt-4">
 
-          {/* Section 1: Select SJ */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
-            <div className="lg:col-span-4">
-              <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Delivery Info</h2>
-              <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Select the Surat Jalan that this POD is for.</p>
-            </div>
-
-            <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-primary uppercase tracking-wider block">Surat Jalan *</label>
-                <select
-                  value={selectedSJ}
-                  onChange={(e) => setSelectedSJ(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-900 sm:bg-white border sm:border-2 border-slate-200 sm:border-primary/50 dark:border-slate-700 rounded-xl py-3.5 px-4 text-[16px] sm:text-sm font-bold text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer shadow-sm"
-                >
-                  <option value="">-- Pilih Surat Jalan --</option>
-                  {availableSJ.length === 0 ? (
-                    <option disabled>Tidak ada SJ yang siap dikirim</option>
-                  ) : (
-                    availableSJ.map(sj => (
-                      <option key={sj.number} value={sj.number}>
-                        {sj.number} — {sj.destination} ({sj.clientName})
-                      </option>
-                    ))
-                  )}
-                </select>
-              </div>
-
-              {/* SJ Preview */}
-              {selectedSJData && (
-                <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Nomor SJ</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.number}</p>
+          {existingPod ? (
+            <div className="w-full max-w-3xl mx-auto bg-white dark:bg-slate-900 sm:rounded-2xl sm:shadow-lg sm:border border-slate-200 dark:border-slate-800 overflow-hidden">
+              <DocumentPrintLayout
+                docType="POD"
+                docNumber={existingPod.number || existingPod.id || '-'}
+                date={(() => {
+                  const dateVal = existingPod.receivedAt || existingPod.createdAt;
+                  if (!dateVal) return '-';
+                  const d = new Date(dateVal);
+                  if (isNaN(d.getTime())) return '-';
+                  return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                })()}
+                status={existingPod.status || 'RECEIVED'}
+                metadata={[
+                  { label: 'Dibuat Oleh', value: 'Sopir / Driver' },
+                  { label: 'Tanggal Diterima', value: (() => {
+                    const dateVal = existingPod.receivedAt || existingPod.createdAt;
+                    if (!dateVal) return '-';
+                    const d = new Date(dateVal);
+                    if (isNaN(d.getTime())) return '-';
+                    return d.toLocaleDateString('id-ID');
+                  })() },
+                  { label: 'Tipe Dokumen', value: 'Bukti Serah Terima (POD)' },
+                  { label: 'Kondisi Pengiriman', value: existingPod.deliveryCondition === 'good' ? 'Barang Diterima Baik' : existingPod.deliveryCondition === 'partial_damage' ? 'Sebagian Rusak' : existingPod.deliveryCondition === 'damaged' ? 'Barang Rusak' : 'Barang Hilang' },
+                  { label: 'Nomor SJ Terkait', value: existingPod.sjNumber || '-' },
+                ]}
+                parties={[
+                  {
+                    label: 'Penerima Barang',
+                    name: existingPod.receiverName || existingPod.receivedBy || '-',
+                    address: `Jabatan: ${existingPod.receiverTitle || '-'} \nTelp: ${existingPod.receiverPhone || '-'}`,
+                    icon: 'person',
+                  },
+                  {
+                    label: 'Pengirim (Driver)',
+                    name: selectedSJData?.dispatch?.driverName || selectedSJData?.driverName || 'Driver Operasional',
+                    address: `No. Polisi: ${selectedSJData?.dispatch?.truckPlate || selectedSJData?.truckPlate || '-'}`,
+                    icon: 'local_shipping',
+                  },
+                ]}
+                body={(
+                  <div className="space-y-6 font-body">
+                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl p-4 bg-slate-50/50 dark:bg-slate-800/30">
+                      <h3 className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider mb-2">Detail Penerimaan & Catatan</h3>
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium">{existingPod.notes || 'Diterima dalam kondisi baik dan lengkap.'}</p>
                     </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Klien</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.clientName}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Tujuan</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.destination}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Cargo</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.items?.length || 0} items, {selectedSJData.totalWeight || 0}T</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-2 border-t border-primary/10">
-                    <StatusBadge status={selectedSJData.status} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </section>
-
-          {/* Section 2: Receiver Info */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
-            <div className="lg:col-span-4">
-              <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Receiver Info</h2>
-              <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Identitas penerima barang di lokasi tujuan.</p>
-            </div>
-
-            <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Penerima *</label>
-                  <input
-                    type="text"
-                    value={receiverName}
-                    onChange={(e) => setReceiverName(e.target.value)}
-                    placeholder="Nama lengkap penerima"
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jabatan / Title</label>
-                  <input
-                    type="text"
-                    value={receiverTitle}
-                    onChange={(e) => setReceiverTitle(e.target.value)}
-                    placeholder="Contoh: Warehouse Manager"
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Telepon</label>
-                  <input
-                    type="tel"
-                    value={receiverPhone}
-                    onChange={(e) => setReceiverPhone(e.target.value)}
-                    placeholder="0812xxxxxxxxx"
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal & Waktu Terima *</label>
-                  <input
-                    type="datetime-local"
-                    value={receivedAt}
-                    min={new Date().toISOString().slice(0, 16)}
-                    onChange={(e) => setReceivedAt(e.target.value)}
-                    className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Signature Sections */}
-              <div className="border-t border-slate-100 dark:border-slate-800 pt-6 mt-6">
-                <h3 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">draw</span>
-                  Tanda Tangan
-                </h3>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                  {/* Receiver Signature */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Penerima</label>
-                    </div>
-                    {receiverSignature ? (
-                      <div className="relative border-2 border-primary/30 rounded-xl bg-white p-2">
-                        <img src={receiverSignature} alt="TTD Penerima" className="w-full h-[120px] object-contain" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSignatureTarget('receiver');
-                            setShowSignatureModal(true);
-                          }}
-                          className="absolute inset-0 w-full h-full bg-transparent active:bg-primary/10 sm:hover:bg-primary/10 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                        >
-                          <span className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">Ubah</span>
-                        </button>
+                    {(existingPod.status === 'POD DISCREPANCY' || existingPod.deliveryCondition !== 'good') && (
+                      <div className="border border-red-200 dark:border-red-900/30 rounded-xl p-4 bg-red-50/30 dark:bg-red-900/10">
+                        <h3 className="font-bold text-red-800 dark:text-red-400 text-xs uppercase tracking-wider mb-2">Detail Temuan Kerusakan / Kehilangan</h3>
+                        <p className="text-sm text-red-700 dark:text-red-300 font-medium">{existingPod.discrepancyDetails || 'Ada ketidaksesuaian jumlah atau kondisi barang.'}</p>
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSignatureTarget('receiver');
-                          setShowSignatureModal(true);
-                        }}
-                        className="w-full h-[120px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl active:bg-slate-50 sm:hover:border-primary sm:hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-slate-500"
-                      >
-                        <span className="material-symbols-outlined text-[28px]">draw</span>
-                        <span className="text-sm font-medium">Tanda Tangan</span>
-                      </button>
                     )}
-                  </div>
 
-                  {/* Driver Signature */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Driver</label>
-                    </div>
-                    {driverSignature ? (
-                      <div className="relative border-2 border-secondary/30 rounded-xl bg-white p-2">
-                        <img src={driverSignature} alt="TTD Driver" className="w-full h-[120px] object-contain" />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSignatureTarget('driver');
-                            setShowSignatureModal(true);
-                          }}
-                          className="absolute inset-0 w-full h-full bg-transparent active:bg-secondary/10 sm:hover:bg-secondary/10 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
-                        >
-                          <span className="bg-secondary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">Ubah</span>
-                        </button>
+                    {/* Foto Dokumentasi */}
+                    <div className="space-y-3">
+                      <h3 className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">Foto Dokumentasi</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {barangPhotos.map((p, idx) => (
+                          <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 dark:border-slate-700 bg-slate-100">
+                            <img src={p} alt={`Barang ${idx + 1}`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 right-1 bg-black/60 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Barang</span>
+                          </div>
+                        ))}
+                        {kerusakanPhotos.map((p, idx) => (
+                          <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 dark:border-slate-700 bg-slate-100">
+                            <img src={p} alt={`Kerusakan ${idx + 1}`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 right-1 bg-red-600/80 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Temuan</span>
+                          </div>
+                        ))}
+                        {barangPhotos.length === 0 && kerusakanPhotos.length === 0 && (
+                          <div className="col-span-full py-4 text-center text-slate-400 text-xs italic">Tidak ada foto dokumentasi.</div>
+                        )}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSignatureTarget('driver');
-                          setShowSignatureModal(true);
-                        }}
-                        className="w-full h-[120px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl active:bg-slate-50 sm:hover:border-secondary sm:hover:bg-secondary/5 transition-colors flex flex-col items-center justify-center gap-2 text-slate-500"
-                      >
-                        <span className="material-symbols-outlined text-[28px]">draw</span>
-                        <span className="text-sm font-medium">Tanda Tangan</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Section 3: Delivery Condition */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
-            <div className="lg:col-span-4">
-              <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Condition</h2>
-              <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Kondisi barang saat diterima di tujuan.</p>
-            </div>
-
-            <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
-              {/* Condition Selection */}
-              <div className="space-y-3">
-                <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Kondisi Pengiriman *</label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {Object.entries(CONDITION_CONFIG).map(([key, cfg]) => {
-                    const isSelected = deliveryCondition === key;
-                    const borderClass = isSelected && key === 'good' ? 'border-primary ring-1 ring-primary' :
-                                       isSelected && key === 'partial_damage' ? 'border-amber-500 ring-1 ring-amber-500' :
-                                       isSelected ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-700';
-                    const bgClass = isSelected && key === 'good' ? 'bg-primary/5' :
-                                    isSelected && key === 'partial_damage' ? 'bg-amber-50 dark:bg-amber-900/20' :
-                                    isSelected ? 'bg-red-50 dark:bg-red-900/20' : 'bg-white dark:bg-slate-800';
-                    const textClass = isSelected && key === 'good' ? 'text-primary' :
-                                     isSelected && key === 'partial_damage' ? 'text-amber-600' :
-                                     isSelected ? 'text-red-500' : 'text-slate-600 dark:text-slate-300';
-                    const iconClass = textClass;
-                    return (
-                      <button
-                        key={key}
-                        onClick={() => setDeliveryCondition(key)}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${borderClass} ${bgClass} active:scale-[0.98] ${!isSelected ? 'sm:hover:border-slate-300 dark:sm:hover:border-slate-600' : ''}`}
-                        type="button"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className={`material-symbols-outlined ${iconClass}`}>{cfg.icon}</span>
-                          <span className={`text-sm font-bold ${textClass}`}>
-                            {cfg.label}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Discrepancy Details (if damaged/partial_damage) */}
-              {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
-                <div className="p-4 rounded-xl bg-error/5 border border-error/20 space-y-3 animate-fade-in">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-error text-[18px]">warning</span>
-                    <h4 className="text-sm font-bold text-error">Detail Kerusakan</h4>
-                  </div>
-                  <textarea
-                    value={discrepancyDetails}
-                    onChange={(e) => setDiscrepancyDetails(e.target.value)}
-                    placeholder="Jelaskan kerusakan yang terjadi pada barang..."
-                    rows={3}
-                    className="w-full bg-white dark:bg-slate-900 border border-error/30 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-error focus:outline-none resize-none shadow-sm"
-                  />
-                  <p className="text-xs text-slate-500">Foto kerusakan wajib diupload di section bawah.</p>
-                </div>
-              )}
-
-              {/* Notes */}
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catatan Tambahan</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Catatan opsional terkait pengiriman..."
-                  rows={2}
-                  className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none resize-none"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* Section 4: Photo Evidence (F-POD-02) */}
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
-            <div className="lg:col-span-4">
-              <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Photo Evidence</h2>
-              <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Bukti foto serah terima dan kondisi barang.</p>
-              <div className="mt-4 sm:mt-6 flex items-center gap-3 bg-primary/5 sm:bg-transparent p-3 sm:p-0 rounded-lg">
-                <span className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(70,99,71,0.5)]"></span>
-                <span className="text-[11px] font-black text-primary uppercase tracking-widest">Minimum 1 Foto</span>
-              </div>
-            </div>
-
-            <div className="lg:col-span-8 space-y-4 sm:space-y-6">
-              {/* Foto Barang Diturunkan */}
-              <div className="sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm sm:hover:shadow-md transition-shadow">
-                <h3 className="text-sm font-bold font-headline text-on-surface mb-3 sm:mb-4 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary text-[20px]">photo_camera</span>
-                  Foto Barang Diturunkan (F-POD-02a) *
-                </h3>
-                <FileUpload
-                  documentId={podNumber || 'temp-pod'}
-                  category="pod_barang"
-                  fileType="photo"
-                  label="Upload Foto Barang"
-                  multiple
-                  required
-                  maxFiles={10}
-                  onUploadComplete={handlePhotoUpload(setBarangPhotos)}
-                  existingFiles={barangPhotos}
-                />
-                {barangPhotos.length > 0 && (
-                  <div className="mt-3 p-3 bg-primary/10 rounded-xl border border-primary/20">
-                    <p className="text-xs font-bold text-primary flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                      {barangPhotos.length} foto berhasil diupload
-                    </p>
+                    </div>
                   </div>
                 )}
-              </div>
+                signatures={[
+                  { label: 'Diterima Oleh (Penerima)', name: existingPod.receiverName || existingPod.receivedBy || '-', image: existingPod.receiverSignature },
+                  { label: 'Diserahkan Oleh (Driver)', name: selectedSJData?.dispatch?.driverName || selectedSJData?.driverName || 'Driver', image: existingPod.driverSignature },
+                ]}
+                footerText="Dokumen ini sah secara digital sebagai tanda terima barang logistik Fleet Ops."
+              />
+            </div>
+          ) : (
+            <>
+              {/* Section 1: Select SJ */}
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
+                <div className="lg:col-span-4">
+                  <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Delivery Info</h2>
+                  <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Select the Surat Jalan that this POD is for.</p>
+                </div>
 
-              {/* Foto Kerusakan (if discrepancy) */}
-              {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
-                <div className="sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm sm:hover:shadow-md transition-shadow sm:border border-error/20 animate-fade-in mt-6 sm:mt-0 pt-6 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-t-0">
-                  <h3 className="text-sm font-bold font-headline text-error mb-3 sm:mb-4 flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]">broken_image</span>
-                    Foto Kerusakan (F-POD-02c)
-                  </h3>
-                  <FileUpload
-                    documentId={podNumber || 'temp-pod'}
-                    category="pod_kerusakan"
-                    fileType="photo"
-                    label="Upload Foto Kerusakan"
-                    multiple
-                    maxFiles={10}
-                    onUploadComplete={handlePhotoUpload(setKerusakanPhotos)}
-                    existingFiles={kerusakanPhotos}
-                  />
-                  {kerusakanPhotos.length > 0 && (
-                    <div className="mt-3 p-3 bg-error/10 rounded-xl border border-error/20">
-                      <p className="text-xs font-bold text-error flex items-center gap-1.5">
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        {kerusakanPhotos.length} foto berhasil diupload
-                      </p>
+                <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
+                  <div className="space-y-2">
+                    <label className="text-[11px] font-bold text-primary uppercase tracking-wider block">Surat Jalan *</label>
+                    <select
+                      value={selectedSJ}
+                      onChange={(e) => setSelectedSJ(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-900 sm:bg-white border sm:border-2 border-slate-200 sm:border-primary/50 dark:border-slate-700 rounded-xl py-3.5 px-4 text-[16px] sm:text-sm font-bold text-on-surface focus:ring-2 focus:ring-primary focus:border-primary transition-all appearance-none cursor-pointer shadow-sm"
+                    >
+                      <option value="">-- Pilih Surat Jalan --</option>
+                      {availableSJ.length === 0 ? (
+                        <option disabled>Tidak ada SJ yang siap dikirim</option>
+                      ) : (
+                        availableSJ.map(sj => (
+                          <option key={sj.number} value={sj.number}>
+                            {sj.number} — {sj.destination} ({sj.clientName})
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+                  {/* SJ Preview */}
+                  {selectedSJData && (
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">Nomor SJ</p>
+                          <p className="font-bold text-on-surface">{selectedSJData.number}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">Klien</p>
+                          <p className="font-bold text-on-surface">{selectedSJData.clientName}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">Tujuan</p>
+                          <p className="font-bold text-on-surface">{selectedSJData.destination}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">Cargo</p>
+                          <p className="font-bold text-on-surface">{selectedSJData.items?.length || 0} items, {selectedSJData.totalWeight || 0}T</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2 border-t border-primary/10">
+                        <StatusBadge status={selectedSJData.status} />
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-          </section>
+              </section>
+
+              {/* Section 2: Receiver Info */}
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
+                <div className="lg:col-span-4">
+                  <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Receiver Info</h2>
+                  <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Identitas penerima barang di lokasi tujuan.</p>
+                </div>
+
+                <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Penerima *</label>
+                      <input
+                        type="text"
+                        value={receiverName}
+                        onChange={(e) => setReceiverName(e.target.value)}
+                        placeholder="Nama lengkap penerima"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Jabatan / Title</label>
+                      <input
+                        type="text"
+                        value={receiverTitle}
+                        onChange={(e) => setReceiverTitle(e.target.value)}
+                        placeholder="Contoh: Warehouse Manager"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">No. Telepon</label>
+                      <input
+                        type="tel"
+                        value={receiverPhone}
+                        onChange={(e) => setReceiverPhone(e.target.value)}
+                        placeholder="0812xxxxxxxxx"
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal & Waktu Terima *</label>
+                      <input
+                        type="datetime-local"
+                        value={receivedAt}
+                        min={new Date().toISOString().slice(0, 16)}
+                        onChange={(e) => setReceivedAt(e.target.value)}
+                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Signature Sections */}
+                  <div className="border-t border-slate-100 dark:border-slate-800 pt-6 mt-6">
+                    <h3 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary">draw</span>
+                      Tanda Tangan
+                    </h3>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                      {/* Receiver Signature */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Penerima</label>
+                        </div>
+                        {receiverSignature ? (
+                          <div className="relative border-2 border-primary/30 rounded-xl bg-white p-2">
+                            <img src={receiverSignature} alt="TTD Penerima" className="w-full h-[120px] object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSignatureTarget('receiver');
+                                setShowSignatureModal(true);
+                              }}
+                              className="absolute inset-0 w-full h-full bg-transparent active:bg-primary/10 sm:hover:bg-primary/10 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                            >
+                              <span className="bg-primary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">Ubah</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSignatureTarget('receiver');
+                              setShowSignatureModal(true);
+                            }}
+                            className="w-full h-[120px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl active:bg-slate-50 sm:hover:border-primary sm:hover:bg-primary/5 transition-colors flex flex-col items-center justify-center gap-2 text-slate-500"
+                          >
+                            <span className="material-symbols-outlined text-[28px]">draw</span>
+                            <span className="text-sm font-medium">Tanda Tangan</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Driver Signature */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Driver</label>
+                        </div>
+                        {driverSignature ? (
+                          <div className="relative border-2 border-secondary/30 rounded-xl bg-white p-2">
+                            <img src={driverSignature} alt="TTD Driver" className="w-full h-[120px] object-contain" />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSignatureTarget('driver');
+                                setShowSignatureModal(true);
+                              }}
+                              className="absolute inset-0 w-full h-full bg-transparent active:bg-secondary/10 sm:hover:bg-secondary/10 rounded-xl flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                            >
+                              <span className="bg-secondary text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm">Ubah</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSignatureTarget('driver');
+                              setShowSignatureModal(true);
+                            }}
+                            className="w-full h-[120px] border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl active:bg-slate-50 sm:hover:border-secondary sm:hover:bg-secondary/5 transition-colors flex flex-col items-center justify-center gap-2 text-slate-500"
+                          >
+                            <span className="material-symbols-outlined text-[28px]">draw</span>
+                            <span className="text-sm font-medium">Tanda Tangan</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 3: Delivery Condition */}
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
+                <div className="lg:col-span-4">
+                  <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Condition</h2>
+                  <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Kondisi barang saat diterima di tujuan.</p>
+                </div>
+
+                <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
+                  {/* Condition Selection */}
+                  <div className="space-y-3">
+                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">Kondisi Pengiriman *</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {Object.entries(CONDITION_CONFIG).map(([key, cfg]) => {
+                        const isSelected = deliveryCondition === key;
+                        const borderClass = isSelected && key === 'good' ? 'border-primary ring-1 ring-primary' :
+                                           isSelected && key === 'partial_damage' ? 'border-amber-500 ring-1 ring-amber-500' :
+                                           isSelected ? 'border-red-500 ring-1 ring-red-500' : 'border-slate-200 dark:border-slate-700';
+                        const bgClass = isSelected && key === 'good' ? 'bg-primary/5' :
+                                        isSelected && key === 'partial_damage' ? 'bg-amber-50 dark:bg-amber-900/20' :
+                                        isSelected ? 'bg-red-50 dark:bg-red-900/20' : 'bg-white dark:bg-slate-800';
+                        const textClass = isSelected && key === 'good' ? 'text-primary' :
+                                         isSelected && key === 'partial_damage' ? 'text-amber-600' :
+                                         isSelected ? 'text-red-500' : 'text-slate-600 dark:text-slate-300';
+                        const iconClass = textClass;
+                        return (
+                          <button
+                            key={key}
+                            onClick={() => setDeliveryCondition(key)}
+                            className={`p-4 rounded-xl border-2 text-left transition-all ${borderClass} ${bgClass} active:scale-[0.98] ${!isSelected ? 'sm:hover:border-slate-300 dark:sm:hover:border-slate-600' : ''}`}
+                            type="button"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className={`material-symbols-outlined ${iconClass}`}>{cfg.icon}</span>
+                              <span className={`text-sm font-bold ${textClass}`}>
+                                {cfg.label}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Discrepancy Details (if damaged/partial_damage) */}
+                  {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
+                    <div className="p-4 rounded-xl bg-error/5 border border-error/20 space-y-3 animate-fade-in">
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-error text-[18px]">warning</span>
+                        <h4 className="text-sm font-bold text-error">Detail Kerusakan</h4>
+                      </div>
+                      <textarea
+                        value={discrepancyDetails}
+                        onChange={(e) => setDiscrepancyDetails(e.target.value)}
+                        placeholder="Jelaskan kerusakan yang terjadi pada barang..."
+                        rows={3}
+                        className="w-full bg-white dark:bg-slate-900 border border-error/30 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-error focus:outline-none resize-none shadow-sm"
+                      />
+                      <p className="text-xs text-slate-500">Foto kerusakan wajib diupload di section bawah.</p>
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Catatan Tambahan</label>
+                    <textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Catatan opsional terkait pengiriman..."
+                      rows={2}
+                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none resize-none"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 4: Photo Evidence (F-POD-02) */}
+              <section className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-8 items-start bg-white dark:bg-slate-900 sm:bg-transparent p-5 sm:p-0">
+                <div className="lg:col-span-4">
+                  <h2 className="text-lg sm:text-3xl font-extrabold text-on-surface font-headline leading-tight tracking-tight">Photo Evidence</h2>
+                  <p className="text-[13px] sm:text-sm text-slate-500 mt-1 sm:mt-2 font-body pr-4">Bukti foto serah terima dan kondisi barang.</p>
+                  <div className="mt-4 sm:mt-6 flex items-center gap-3 bg-primary/5 sm:bg-transparent p-3 sm:p-0 rounded-lg">
+                    <span className="w-1 h-6 bg-primary rounded-full shadow-[0_0_10px_rgba(70,99,71,0.5)]"></span>
+                    <span className="text-[11px] font-black text-primary uppercase tracking-widest">Minimum 1 Foto</span>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-8 space-y-4 sm:space-y-6">
+                  {/* Foto Barang Diturunkan */}
+                  <div className="sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm sm:hover:shadow-md transition-shadow">
+                    <h3 className="text-sm font-bold font-headline text-on-surface mb-3 sm:mb-4 flex items-center gap-2">
+                      <span className="material-symbols-outlined text-primary text-[20px]">photo_camera</span>
+                      Foto Barang Diturunkan (F-POD-02a) *
+                    </h3>
+                    <FileUpload
+                      documentId={podNumber || 'temp-pod'}
+                      category="pod_barang"
+                      fileType="photo"
+                      label="Upload Foto Barang"
+                      multiple
+                      required
+                      maxFiles={10}
+                      onUploadComplete={handlePhotoUpload(setBarangPhotos)}
+                      existingFiles={barangPhotos}
+                    />
+                    {barangPhotos.length > 0 && (
+                      <div className="mt-3 p-3 bg-primary/10 rounded-xl border border-primary/20">
+                        <p className="text-xs font-bold text-primary flex items-center gap-1.5">
+                          <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                          {barangPhotos.length} foto berhasil diupload
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Foto Kerusakan (if discrepancy) */}
+                  {(deliveryCondition === 'partial_damage' || deliveryCondition === 'damaged') && (
+                    <div className="sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm sm:hover:shadow-md transition-shadow sm:border border-error/20 animate-fade-in mt-6 sm:mt-0 pt-6 sm:pt-0 border-t border-slate-100 dark:border-slate-800 sm:border-t-0">
+                      <h3 className="text-sm font-bold font-headline text-error mb-3 sm:mb-4 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[20px]">broken_image</span>
+                        Foto Kerusakan (F-POD-02c)
+                      </h3>
+                      <FileUpload
+                        documentId={podNumber || 'temp-pod'}
+                        category="pod_kerusakan"
+                        fileType="photo"
+                        label="Upload Foto Kerusakan"
+                        multiple
+                        maxFiles={10}
+                        onUploadComplete={handlePhotoUpload(setKerusakanPhotos)}
+                        existingFiles={kerusakanPhotos}
+                      />
+                      {kerusakanPhotos.length > 0 && (
+                        <div className="mt-3 p-3 bg-error/10 rounded-xl border border-error/20">
+                          <p className="text-xs font-bold text-error flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                            {kerusakanPhotos.length} foto berhasil diupload
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            </>
+          )}
 
         </div>
       </div>
 
       {/* Footer Action Bar */}
-      <div className="sticky bottom-0 left-0 w-full z-40 flex-shrink-0">
-        <div className="backdrop-blur-xl bg-white/95 dark:bg-slate-950/95 border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-4">
-          <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
-            {canSubmit ? (
-              <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
-                <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
-                <span className="text-[11px] font-bold text-primary uppercase tracking-widest">Ready</span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Incomplete</span>
-              </div>
-            )}
-          </div>
+      {!existingPod && (
+        <div className="sticky bottom-0 left-0 w-full z-40 flex-shrink-0">
+          <div className="backdrop-blur-xl bg-white/95 dark:bg-slate-950/95 border-t border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 shadow-[0_-10px_20px_rgba(0,0,0,0.05)] pb-[calc(env(safe-area-inset-bottom)+0.75rem)] sm:pb-4">
+            <div className="w-full sm:w-auto flex items-center justify-between sm:justify-start gap-4">
+              {canSubmit ? (
+                <div className="flex items-center gap-2 bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">
+                  <span className="w-2.5 h-2.5 rounded-full bg-primary animate-pulse"></span>
+                  <span className="text-[11px] font-bold text-primary uppercase tracking-widest">Ready</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full border border-slate-200 dark:border-slate-700">
+                  <span className="w-2.5 h-2.5 rounded-full bg-slate-400"></span>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Incomplete</span>
+                </div>
+              )}
+            </div>
 
           <div className="w-full sm:w-auto flex items-center gap-3">
             <button
@@ -622,6 +710,7 @@ export default function ProofOfDelivery() {
           </div>
         </div>
       </div>
+      )}
 
       {/* Confirmation Modal */}
       <Modal
