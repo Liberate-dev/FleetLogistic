@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Modal({ isOpen, onClose, title, children, size = 'md', showCloseButton = true }) {
   if (!isOpen) return null;
@@ -11,8 +12,11 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', s
     full: 'max-w-6xl',
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in">
+  const modalContent = (
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-fade-in"
+      onClick={onClose}
+    >
       <div
         className={`bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden animate-slide-up border border-slate-200 dark:border-slate-800 flex flex-col`}
         onClick={(e) => e.stopPropagation()}
@@ -40,4 +44,6 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md', s
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

@@ -9,9 +9,9 @@ const adapter = new PrismaBetterSqlite3({ url: `file:${dbPath}` });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  console.log('🌱 Seeding database...');
+  console.log('🌱 Seeding database with full operational data...');
 
-  // Create users
+  // 1. Create Users
   const adminUser = await prisma.user.upsert({
     where: { email: 'admin@fleetops.com' },
     update: {},
@@ -34,7 +34,7 @@ async function main() {
 
   console.log('✓ Users created');
 
-  // Create customers
+  // 2. Create Customers
   const customers = await Promise.all([
     prisma.customer.upsert({
       where: { code: 'CUST-001' },
@@ -55,7 +55,7 @@ async function main() {
 
   console.log('✓ Customers created');
 
-  // Create materials
+  // 3. Create Materials
   const materials = await Promise.all([
     prisma.material.upsert({
       where: { code: 'MAT-001' },
@@ -86,7 +86,7 @@ async function main() {
 
   console.log('✓ Materials created');
 
-  // Create vehicles
+  // 4. Create Vehicles
   const vehicles = await Promise.all([
     prisma.vehicle.upsert({
       where: { plateNumber: 'B 1234 ABC' },
@@ -128,7 +128,7 @@ async function main() {
 
   console.log('✓ Vehicles created');
 
-  // Create drivers
+  // 5. Create Drivers
   const drivers = await Promise.all([
     prisma.driver.upsert({
       where: { employeeId: 'DRV-001' },
@@ -167,8 +167,8 @@ async function main() {
 
   console.log('✓ Drivers created');
 
-  // Create sample Surat Jalan
-  const sj = await prisma.suratJalan.upsert({
+  // 6. Create Surat Jalan 1: DRAFT Status (New Order)
+  const sj1 = await prisma.suratJalan.upsert({
     where: { documentNumber: 'SJ-20260428-001' },
     update: {},
     create: {
@@ -176,8 +176,16 @@ async function main() {
       customerId: customers[0].id,
       date: new Date(),
       status: 'DRAFT',
-      notes: 'Sample Surat Jalan for testing',
+      destination: 'PT Maju Bersama - Pabrik Jakarta Timur',
+      destinationAddress: 'Jl. Sudirman No. 123, Kawasan Industri Jakarta Timur',
+      originDepot: 'Warehouse A - Jakarta Timur',
+      contactPerson: 'Bapak Hendra Wijaya',
+      contactPhone: '021-1234567',
+      createdByName: 'Admin Operasional',
+      notes: 'Total Weight: 15.50 Ton | Total Qty: 150 | Photo Count: 2',
       createdById: adminUser.id,
+      uangJalanNominal: 500000,
+      uangJalanRecipient: 'Budi Santoso',
       items: {
         create: [
           { materialId: materials[0].id, quantity: 100, unitPrice: 75000 },
@@ -187,14 +195,321 @@ async function main() {
     }
   });
 
-  console.log('✓ Sample Surat Jalan created');
+  // 7. Create Surat Jalan 2: ASSIGNED Status (Dispatched but not departed)
+  const sj2 = await prisma.suratJalan.upsert({
+    where: { documentNumber: 'SJ-20260428-002' },
+    update: {},
+    create: {
+      documentNumber: 'SJ-20260428-002',
+      customerId: customers[1].id,
+      date: new Date(Date.now() - 86400000), // 1 day ago
+      status: 'ASSIGNED',
+      destination: 'CV Karya Mandiri - Site Cikarang',
+      destinationAddress: 'Kawasan Industri Cikarang Blok C No. 5',
+      originDepot: 'Warehouse A - Jakarta Timur',
+      contactPerson: 'Ibu Ratna',
+      contactPhone: '0812-9876-5432',
+      createdByName: 'Admin Operasional',
+      notes: 'Total Weight: 8.00 Ton | Total Qty: 80 | Photo Count: 0',
+      createdById: adminUser.id,
+      uangJalanNominal: 750000,
+      uangJalanRecipient: 'Ahmad Hidayat',
+      items: {
+        create: [
+          { materialId: materials[2].id, quantity: 80, unitPrice: 150000 }
+        ]
+      },
+      dispatch: {
+        create: {
+          vehicleId: vehicles[1].id,
+          driverId: drivers[1].id,
+          status: 'ASSIGNED',
+          gateCheckStatus: 'PENDING',
+          vehicleChecklist: {
+            create: {
+              vehicleId: vehicles[1].id,
+              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli']),
+              condition: 'GOOD',
+              checkedById: operatorUser.id
+            }
+          },
+          driverChecklist: {
+            create: {
+              driverId: drivers[1].id,
+              hasLicense: true,
+              licenseValid: true,
+              condition: 'FIT',
+              checkedById: operatorUser.id
+            }
+          }
+        }
+      }
+    }
+  });
 
-  console.log('✅ Seeding complete!');
-  console.log('\nSample data:');
-  console.log('- Admin user: admin@fleetops.com');
-  console.log('- Operator user: operator@fleetops.com');
-  console.log(`- 3 customers, 5 materials, 3 vehicles, 3 drivers`);
-  console.log(`- Sample SJ: ${sj.documentNumber}`);
+  // 8. Create Surat Jalan 3: DISPATCHED Status (On the road)
+  const sj3 = await prisma.suratJalan.upsert({
+    where: { documentNumber: 'SJ-20260428-003' },
+    update: {},
+    create: {
+      documentNumber: 'SJ-20260428-003',
+      customerId: customers[2].id,
+      date: new Date(Date.now() - 172800000), // 2 days ago
+      status: 'DISPATCHED',
+      destination: 'UD Sumber Rejeki - Surabaya',
+      destinationAddress: 'Jl. Ahmad Yani No. 789, Surabaya',
+      originDepot: 'Warehouse B - Cikarang',
+      contactPerson: 'Bapak Joko',
+      contactPhone: '0811-2222-3333',
+      createdByName: 'Operator User',
+      notes: 'Urgent Delivery - Total Weight: 12.00 Ton | Total Qty: 120 | Photo Count: 3',
+      createdById: operatorUser.id,
+      dispatchedAt: new Date(Date.now() - 86400000),
+      uangJalanNominal: 1500000,
+      danaCadanganNominal: 500000,
+      uangJalanRecipient: 'Budi Santoso',
+      items: {
+        create: [
+          { materialId: materials[3].id, quantity: 100, unitPrice: 85000 },
+          { materialId: materials[4].id, quantity: 20, unitPrice: 200000 }
+        ]
+      },
+      dispatch: {
+        create: {
+          vehicleId: vehicles[0].id,
+          driverId: drivers[0].id,
+          status: 'DISPATCHED',
+          gateCheckStatus: 'PASSED',
+          gateCheckAt: new Date(Date.now() - 86400000),
+          gateCheckById: operatorUser.id,
+          vehicleChecklist: {
+            create: {
+              vehicleId: vehicles[0].id,
+              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Wiper']),
+              condition: 'GOOD',
+              checkedById: operatorUser.id
+            }
+          },
+          driverChecklist: {
+            create: {
+              driverId: drivers[0].id,
+              hasLicense: true,
+              licenseValid: true,
+              condition: 'FIT',
+              checkedById: operatorUser.id
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 9. Create Surat Jalan 4: DELIVERED Status (Needs LPJ)
+  const sj4 = await prisma.suratJalan.upsert({
+    where: { documentNumber: 'SJ-20260428-004' },
+    update: {},
+    create: {
+      documentNumber: 'SJ-20260428-004',
+      customerId: customers[0].id,
+      date: new Date(Date.now() - 345600000), // 4 days ago
+      status: 'DELIVERED',
+      destination: 'PT Maju Bersama - Warehouse',
+      destinationAddress: 'Kawasan Industri Pulogadung',
+      originDepot: 'Warehouse A - Jakarta Timur',
+      contactPerson: 'Bapak Hendra Wijaya',
+      contactPhone: '021-1234567',
+      createdByName: 'Admin Operasional',
+      notes: 'Total Weight: 2.00 Ton | Total Qty: 20 | Photo Count: 5',
+      createdById: adminUser.id,
+      dispatchedAt: new Date(Date.now() - 259200000),
+      deliveredAt: new Date(Date.now() - 86400000), // Delivered 1 day ago
+      uangJalanNominal: 300000,
+      uangJalanRecipient: 'Dedi Kurniawan',
+      items: {
+        create: [
+          { materialId: materials[1].id, quantity: 20, unitPrice: 65000 }
+        ]
+      },
+      dispatch: {
+        create: {
+          vehicleId: vehicles[2].id,
+          driverId: drivers[2].id,
+          status: 'DELIVERED',
+          gateCheckStatus: 'PASSED',
+          gateCheckAt: new Date(Date.now() - 259200000),
+          gateCheckById: operatorUser.id,
+          vehicleChecklist: {
+            create: {
+              vehicleId: vehicles[2].id,
+              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli']),
+              condition: 'GOOD',
+              checkedById: operatorUser.id
+            }
+          },
+          driverChecklist: {
+            create: {
+              driverId: drivers[2].id,
+              hasLicense: true,
+              licenseValid: true,
+              condition: 'FIT',
+              checkedById: operatorUser.id
+            }
+          },
+          pod: {
+            create: {
+              receivedBy: 'Pak Satpam (Agus)',
+              receivedAt: new Date(Date.now() - 86400000),
+              notes: 'Diterima dalam kondisi baik',
+              submittedById: operatorUser.id,
+              photos: JSON.stringify(['/sample-pod-1.jpg', '/sample-pod-2.jpg'])
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // 10. Create Surat Jalan 5: COMPLETED Status (Has POD and LPJ)
+  const sj5 = await prisma.suratJalan.upsert({
+    where: { documentNumber: 'SJ-20260428-005' },
+    update: {},
+    create: {
+      documentNumber: 'SJ-20260428-005',
+      customerId: customers[1].id,
+      date: new Date(Date.now() - 604800000), // 7 days ago
+      status: 'COMPLETED',
+      destination: 'CV Karya Mandiri - Pusat',
+      destinationAddress: 'Jl. Merdeka No. 1, Bandung',
+      originDepot: 'Warehouse B - Cikarang',
+      contactPerson: 'Ibu Ratna',
+      contactPhone: '0812-9876-5432',
+      createdByName: 'Operator User',
+      notes: 'Total Weight: 5.00 Ton | Total Qty: 50 | Photo Count: 4',
+      createdById: operatorUser.id,
+      dispatchedAt: new Date(Date.now() - 518400000),
+      deliveredAt: new Date(Date.now() - 432000000),
+      completedAt: new Date(Date.now() - 345600000),
+      uangJalanNominal: 600000,
+      uangJalanRecipient: 'Ahmad Hidayat',
+      items: {
+        create: [
+          { materialId: materials[0].id, quantity: 50, unitPrice: 75000 }
+        ]
+      },
+      dispatch: {
+        create: {
+          vehicleId: vehicles[1].id,
+          driverId: drivers[1].id,
+          status: 'COMPLETED',
+          gateCheckStatus: 'PASSED',
+          gateCheckAt: new Date(Date.now() - 518400000),
+          gateCheckById: adminUser.id,
+          vehicleChecklist: {
+            create: {
+              vehicleId: vehicles[1].id,
+              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Klakson']),
+              condition: 'GOOD',
+              checkedById: adminUser.id
+            }
+          },
+          driverChecklist: {
+            create: {
+              driverId: drivers[1].id,
+              hasLicense: true,
+              licenseValid: true,
+              condition: 'FIT',
+              checkedById: adminUser.id
+            }
+          },
+          pod: {
+            create: {
+              receivedBy: 'Gudang Utama - Bpk Rudi',
+              receivedAt: new Date(Date.now() - 432000000),
+              notes: 'Barang komplit sesuai DO',
+              submittedById: adminUser.id,
+              photos: JSON.stringify(['/sample-pod-completed.jpg'])
+            }
+          },
+          lpj: {
+            create: {
+              startKm: 45000,
+              endKm: 45210,
+              fuelUsed: 40.5,
+              expenses: JSON.stringify([
+                { category: 'BBM', amount: 350000, description: 'Solar SPBU Tol' },
+                { category: 'Toll', amount: 150000, description: 'Tol Japek & Cipularang' },
+                { category: 'Parkir', amount: 20000, description: 'Parkir Kawasan' }
+              ]),
+              notes: 'Perjalanan lancar, tidak ada kendala',
+              submittedById: operatorUser.id
+            }
+          }
+        }
+      }
+    }
+  });
+
+  console.log('✓ Dispatches, Checklists, PODs, and LPJs generated for SJs');
+
+  // 11. Add Notifications
+  await prisma.notification.createMany({
+    data: [
+      {
+        userId: adminUser.id,
+        type: 'SYSTEM',
+        title: 'System Initialized',
+        message: 'Welcome to FleetOps Logistics Command Center.',
+        read: false
+      },
+      {
+        userId: operatorUser.id,
+        type: 'DISPATCH',
+        title: 'New Dispatch Assigned',
+        message: 'You have been assigned to review Gate Checks for SJ-20260428-002.',
+        read: false
+      },
+      {
+        userId: adminUser.id,
+        type: 'POD',
+        title: 'POD Received',
+        message: 'Proof of Delivery for SJ-20260428-004 has been uploaded by the driver.',
+        read: false
+      }
+    ]
+  });
+
+  console.log('✓ Notifications generated');
+
+  // 12. Add Audit Logs
+  await prisma.auditLog.createMany({
+    data: [
+      {
+        userId: adminUser.id,
+        entityType: 'SuratJalan',
+        entityId: sj5.id,
+        action: 'CREATE',
+        newValue: 'Created Draft SJ-20260428-005'
+      },
+      {
+        userId: operatorUser.id,
+        entityType: 'LPJ',
+        entityId: sj5.id, // technically dispatchId/lpjId, but for logging demo this is fine
+        action: 'APPROVE',
+        newValue: 'LPJ Approved and SJ marked COMPLETED'
+      }
+    ]
+  });
+
+  console.log('✓ Audit Logs generated');
+
+  console.log('\n✅ Seeding complete!');
+  console.log('\nSample data populated:');
+  console.log('- 1 DRAFT Surat Jalan');
+  console.log('- 1 ASSIGNED Surat Jalan (Ready for Dispatch)');
+  console.log('- 1 DISPATCHED Surat Jalan (In Transit)');
+  console.log('- 1 DELIVERED Surat Jalan (Awaiting LPJ)');
+  console.log('- 1 COMPLETED Surat Jalan (Full cycle: Checklists, POD, LPJ)');
+  console.log('- Notifications & Audit Logs included for Dashboard visualization');
 }
 
 main()

@@ -379,26 +379,51 @@ export default function NewDispatch() {
 
               {/* SJ Preview (if selected) */}
               {selectedSJData && (
-                <div className="mt-4 p-4 rounded-xl bg-primary/5 border border-primary/20">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Selected SJ Details</p>
+                <div className="mt-4 p-5 rounded-xl bg-primary/5 border border-primary/20 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Detail SJ Terpilih</p>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-primary/10 text-primary rounded-full">{selectedSJData.status}</span>
+                  </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <p className="text-slate-400">Number</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.number}</p>
+                      <p className="text-[10px] text-slate-400 uppercase">Nomor SJ</p>
+                      <p className="font-bold text-on-surface font-mono">{selectedSJData.number}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Client</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.clientName}</p>
+                      <p className="text-[10px] text-slate-400 uppercase">Dibuat Oleh</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.createdByName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Destination</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.destination}</p>
+                      <p className="text-[10px] text-slate-400 uppercase">Klien (Untuk Siapa)</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.clientName || '-'}</p>
                     </div>
                     <div>
-                      <p className="text-slate-400">Items</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.items?.length || 0} items, {selectedSJData.totalWeight}T</p>
+                      <p className="text-[10px] text-slate-400 uppercase">Tujuan</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.destination || '-'}</p>
                     </div>
                   </div>
+                  {/* Cargo Manifest mini-view */}
+                  {selectedSJData.items && selectedSJData.items.length > 0 && (
+                    <div className="border-t border-primary/10 pt-3">
+                      <p className="text-[10px] font-bold text-slate-500 uppercase mb-2 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px] text-primary">inventory_2</span>
+                        Cargo ({selectedSJData.items.length} item{selectedSJData.items.length !== 1 ? 's' : ''})
+                      </p>
+                      <div className="space-y-1">
+                        {selectedSJData.items.map((item, idx) => (
+                          <div key={idx} className="flex justify-between text-xs">
+                            <span className="font-mono text-primary">{item.sku || item.material?.code}</span>
+                            <span className="text-slate-600">{item.name || item.material?.name}</span>
+                            <span className="font-bold">{item.qty || item.quantity} {item.unit}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-2 text-right">
+                        <span className="text-[10px] text-slate-400">Total Berat: </span>
+                        <span className="text-xs font-bold text-primary">{selectedSJData.totalWeight || 0} T</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

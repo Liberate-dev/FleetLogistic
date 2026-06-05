@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+import TopNavBar from '../components/TopNavBar';
 import { Modal, FileUpload } from '../components/ui';
 import { documentNumberingService, auditLogger } from '../utils';
 import { useFleetOps } from '../context';
@@ -38,6 +39,7 @@ export default function CreateNewSJ() {
     clientName: '',
     contactPerson: '',
     contactPhone: '',
+    createdByName: 'Admin Operasional', // Default - in real app would come from auth context
   });
 
   // Cargo Items
@@ -136,6 +138,7 @@ export default function CreateNewSJ() {
       totalQty,
       photoCount: muatanPhotos.length,
       createdAt: new Date().toISOString(),
+      createdByName: formData.createdByName || 'Admin Operasional',
     };
 
     try {
@@ -206,21 +209,41 @@ export default function CreateNewSJ() {
 
   return (
     <Layout>
+      <TopNavBar title="Buat Surat Jalan" breadcrumbs={['Operations', 'Surat Jalan', 'New']} showBack={true} />
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 bg-slate-50/50 dark:bg-slate-900/50">
         <div className="max-w-5xl mx-auto w-full space-y-6">
 
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-extrabold font-headline text-on-surface">Buat Surat Jalan Baru</h2>
-              <p className="text-sm text-slate-500 mt-1">Isi data manifest pengiriman step-by-step</p>
-            </div>
-            {sjNumber && (
-              <div className="px-4 py-2 bg-primary/10 rounded-xl border border-primary/20">
-                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nomor SJ (Auto-Generated)</p>
-                <p className="text-sm font-mono font-bold text-primary">{sjNumber}</p>
+          {/* Header + Metadata Banner */}
+          <div className="glass-panel rounded-2xl p-5 border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent dark:from-primary/10">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-[24px]">description</span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-extrabold font-headline text-on-surface">Buat Surat Jalan Baru</h2>
+                  <p className="text-sm text-slate-500 mt-0.5">Isi data manifest pengiriman step-by-step</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="material-symbols-outlined text-[14px]">person</span>
+                      Dibuat oleh: <strong className="text-slate-600 dark:text-slate-300">{formData.createdByName}</strong>
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <span className="material-symbols-outlined text-[14px]">schedule</span>
+                      {new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
               </div>
-            )}
+              {sjNumber && (
+                <div className="px-4 py-3 bg-white dark:bg-slate-800 rounded-xl border border-primary/20 shadow-sm flex-shrink-0">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nomor SJ (Auto-Generated)</p>
+                  <p className="text-lg font-mono font-bold text-primary">{sjNumber}</p>
+                  <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-500 rounded-md uppercase">Draft</span>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Stepper */}
@@ -272,9 +295,17 @@ export default function CreateNewSJ() {
                     <input
                       type="date"
                       value={formData.loadingDate}
+                      min={new Date().toISOString().split('T')[0]}
                       onChange={(e) => setFormData({...formData, loadingDate: e.target.value})}
-                      className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      className={`w-full bg-slate-50 dark:bg-slate-800/50 border rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none ${
+                        formData.loadingDate && new Date(formData.loadingDate) < new Date(new Date().toDateString())
+                          ? 'border-error'
+                          : 'border-slate-200 dark:border-slate-700/50'
+                      }`}
                     />
+                    {formData.loadingDate && new Date(formData.loadingDate) < new Date(new Date().toDateString()) && (
+                      <p className="text-xs text-error font-medium mt-1">Tanggal loading tidak boleh sebelum hari ini</p>
+                    )}
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Depot Asal</label>
@@ -325,7 +356,7 @@ export default function CreateNewSJ() {
                 <div className="p-5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30">
                   <h4 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
                     <span className="material-symbols-outlined text-tertiary text-[18px]">business</span>
-                    Info Klien
+                    Info Klien (Untuk Siapa)
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
@@ -360,9 +391,38 @@ export default function CreateNewSJ() {
                     </div>
                   </div>
                 </div>
+
+                {/* Baris 4: Info Pembuat Dokumen */}
+                <div className="p-5 rounded-xl border border-primary/20 bg-primary/5 dark:bg-primary/10">
+                  <h4 className="text-sm font-bold text-on-surface mb-4 flex items-center gap-2">
+                    <span className="material-symbols-outlined text-primary text-[18px]">badge</span>
+                    Keterangan Pembuat Dokumen
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Dibuat Oleh *</label>
+                      <input
+                        type="text"
+                        value={formData.createdByName}
+                        onChange={(e) => setFormData({...formData, createdByName: e.target.value})}
+                        placeholder="Nama operator / admin"
+                        className="w-full bg-white dark:bg-slate-900/50 border border-primary/30 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                      />
+                      <p className="text-xs text-slate-400">Nama operator yang membuat SJ ini</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal & Waktu Pembuatan</label>
+                      <div className="w-full bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm text-slate-500 flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[16px] text-primary">event</span>
+                        {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
           )}
+
 
           {/* Step 2: Cargo Manifest */}
           {currentStep === 2 && (
@@ -538,10 +598,33 @@ export default function CreateNewSJ() {
               </h3>
 
               <div className="space-y-6">
-                {/* Header - Nomor SJ */}
-                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
-                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Nomor SJ</p>
-                  <p className="text-xl font-mono font-bold text-primary">{sjNumber}</p>
+                {/* Header - Nomor SJ + Metadata */}
+                <div className="p-5 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Nomor Surat Jalan</p>
+                      <p className="text-2xl font-mono font-bold text-primary">{sjNumber}</p>
+                      <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-md uppercase tracking-wider">Draft</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-right">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Dibuat Oleh</p>
+                        <p className="text-sm font-bold text-on-surface">{formData.createdByName || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Untuk Klien</p>
+                        <p className="text-sm font-bold text-on-surface">{formData.clientName || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Tanggal Muat</p>
+                        <p className="text-sm font-medium text-on-surface">{formData.loadingDate || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Dibuat Pada</p>
+                        <p className="text-sm font-medium text-on-surface">{new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Info Umum */}
@@ -561,6 +644,7 @@ export default function CreateNewSJ() {
                     </div>
                   </div>
                 </div>
+
 
                 {/* Info Tujuan */}
                 <div className="space-y-3">

@@ -111,12 +111,16 @@ router.post('/create-from-ui', async (req, res, next) => {
       loadingDate,
       originDepot,
       destination,
+      destinationAddress,
       clientName,
+      contactPerson,
+      contactPhone,
       items,
       cashAdvance,
       totalWeight,
       totalQty,
-      photoCount
+      photoCount,
+      createdByName,
     } = req.body;
 
     // Find or create customer by name
@@ -130,8 +134,8 @@ router.post('/create-from-ui', async (req, res, next) => {
         data: {
           code: `CUST-${Date.now()}`,
           name: clientName,
-          phone: '',
-          address: destination || '',
+          phone: contactPhone || '',
+          address: destinationAddress || destination || '',
         }
       });
     }
@@ -143,16 +147,28 @@ router.post('/create-from-ui', async (req, res, next) => {
     // Generate document number (or use provided)
     const documentNumber = number || await generateDocumentNumber(req.prisma);
 
-    // Create SJ
+    // Create SJ with all UI form data
     const suratJalan = await req.prisma.suratJalan.create({
       data: {
         documentNumber,
         customerId: customer.id,
         date: loadingDate ? new Date(loadingDate) : new Date(),
         status: 'DRAFT',
+        destination: destination || null,
+        destinationAddress: destinationAddress || null,
+        originDepot: originDepot || null,
+        contactPerson: contactPerson || null,
+        contactPhone: contactPhone || null,
+        createdByName: createdByName || null,
         uangJalanNominal: cashAdvance?.uangJalan?.nominal ? parseFloat(cashAdvance.uangJalan.nominal) : null,
         uangJalanRecipient: cashAdvance?.uangJalan?.recipient || null,
-        notes: `Origin: ${originDepot || '-'}\nDestination: ${destination || '-'}\nTotal Weight: ${totalWeight || 0} Ton\nPhoto Count: ${photoCount || 0}`,
+        danaCadanganNominal: cashAdvance?.danaCadangan?.nominal ? parseFloat(cashAdvance.danaCadangan.nominal) : null,
+        notes: `Total Weight: ${totalWeight || 0} Ton | Total Qty: ${totalQty || 0} | Photo Count: ${photoCount || 0}`,
+      },
+      include: {
+        customer: { select: { id: true, code: true, name: true } },
+        items: { include: { material: { select: { id: true, code: true, name: true, unit: true } } } },
+        createdBy: { select: { id: true, name: true } },
       }
     });
 
@@ -186,7 +202,25 @@ router.post('/create-from-ui', async (req, res, next) => {
       }
     }
 
-    res.json({ success: true, suratJalan });
+    // Re-fetch SJ with all relations including newly created items
+    const freshSJ = await req.prisma.suratJalan.findUnique({
+      where: { id: suratJalan.id },
+      include: {
+        customer: { select: { id: true, code: true, name: true } },
+        items: { include: { material: { select: { id: true, code: true, name: true, unit: true } } } },
+        createdBy: { select: { id: true, name: true } },
+        dispatch: {
+          select: {
+            id: true,
+            status: true,
+            vehicle: { select: { id: true, plateNumber: true } },
+            driver: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+
+    res.json({ success: true, suratJalan: freshSJ });
   } catch (error) {
     next(error);
   }

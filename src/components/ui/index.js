@@ -9,3 +9,4 @@ export { default as ToastContainer } from './ToastContainer';
 export { default as SearchableSelect } from './SearchableSelect';
 export { default as FonnteStatus } from './FonnteStatus';
 export { default as DigitalSignature } from './DigitalSignature';
+export { default as DocumentPrintLayout } from './DocumentPrintLayout';

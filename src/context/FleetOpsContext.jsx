@@ -108,6 +108,8 @@ function fleetOpsReducer(state, action) {
       };
 
     // Checklist Actions
+    case 'CHECKLIST_SET':
+      return { ...state, checklists: action.payload };
     case 'CHECKLIST_CREATE':
       return {
         ...state,
@@ -129,6 +131,8 @@ function fleetOpsReducer(state, action) {
       };
 
     // POD Actions
+    case 'POD_SET':
+      return { ...state, pods: action.payload };
     case 'POD_CREATE':
       return {
         ...state,
@@ -150,6 +154,8 @@ function fleetOpsReducer(state, action) {
       };
 
     // LPJ Actions
+    case 'LPJ_SET':
+      return { ...state, lpjRecords: action.payload };
     case 'LPJ_CREATE':
       return {
         ...state,
@@ -253,6 +259,51 @@ function fleetOpsReducer(state, action) {
   }
 }
 
+// Helper: Normalize SJ from DB format to UI-compatible shape
+function normalizeSJFromDB(sj, originalData = {}) {
+  const items = sj.items?.map(item => ({
+    id: item.id,
+    sku: item.material?.code || originalData?.items?.find(i => i.sku === item.material?.code)?.sku || item.material?.code,
+    name: item.material?.name || '',
+    qty: item.quantity,
+    unit: item.material?.unit || 'Kg',
+    weight: item.quantity, // fallback
+    weightUnit: 'kg',
+    volume: 0,
+    volumeUnit: 'm³',
+  })) || originalData?.items || [];
+
+  return {
+    id: sj.id,
+    number: sj.documentNumber,
+    documentNumber: sj.documentNumber,
+    status: sj.status,
+    loadingDate: sj.date,
+    date: sj.date,
+    originDepot: sj.originDepot || originalData?.originDepot || '',
+    destination: sj.destination || originalData?.destination || '',
+    destinationAddress: sj.destinationAddress || originalData?.destinationAddress || '',
+    clientName: sj.customer?.name || originalData?.clientName || '',
+    contactPerson: sj.contactPerson || originalData?.contactPerson || '',
+    contactPhone: sj.contactPhone || originalData?.contactPhone || '',
+    createdByName: sj.createdByName || originalData?.createdByName || '',
+    createdBy: sj.createdBy || null,
+    items,
+    cashAdvance: originalData?.cashAdvance || {
+      uangJalan: { nominal: sj.uangJalanNominal || '', recipient: sj.uangJalanRecipient || '' },
+      danaCadangan: { nominal: sj.danaCadanganNominal || '' },
+    },
+    totalWeight: originalData?.totalWeight || '',
+    totalQty: originalData?.totalQty || items.length,
+    photoCount: sj.photoReceived ? 1 : (originalData?.photoCount || 0),
+    createdAt: sj.createdAt,
+    updatedAt: sj.updatedAt,
+    // Keep customer relation
+    customer: sj.customer || null,
+    dispatch: sj.dispatch || null,
+  };
+}
+
 // Provider Component
 export function FleetOpsProvider({ children }) {
   const [state, dispatch] = useReducer(fleetOpsReducer, initialState);
@@ -261,24 +312,96 @@ export function FleetOpsProvider({ children }) {
   useEffect(() => {
     async function fetchData() {
       try {
-        const [driversRes, customersRes, materialsRes, vehiclesRes, suratJalanRes] = await Promise.all([
+        const [driversRes, customersRes, materialsRes, vehiclesRes, suratJalanRes, dispatchesRes] = await Promise.all([
           fetch('/api/drivers'),
           fetch('/api/customers'),
           fetch('/api/materials'),
           fetch('/api/vehicles'),
           fetch('/api/surat-jalan'),
+          fetch('/api/dispatches?limit=100'),
         ]);
         const driversData = await driversRes.json();
         const customersData = await customersRes.json();
         const materialsData = await materialsRes.json();
         const vehiclesData = await vehiclesRes.json();
         const suratJalanData = await suratJalanRes.json();
+        const dispatchesData = await dispatchesRes.json();
 
         dispatch({ type: 'DRIVERS_SET', payload: driversData.drivers || [] });
         dispatch({ type: 'CUSTOMERS_SET', payload: customersData.customers || [] });
         dispatch({ type: 'MATERIALS_SET', payload: materialsData.materials || [] });
         dispatch({ type: 'FLEET_SET', payload: vehiclesData.vehicles || [] });
-        dispatch({ type: 'SJ_SET', payload: suratJalanData.suratJalan || [] });
+        // Normalize SJ data from DB to UI-compatible shape
+        const normalizedSJ = (suratJalanData.suratJalan || []).map(sj => normalizeSJFromDB(sj));
+        dispatch({ type: 'SJ_SET', payload: normalizedSJ });
+
+        // Normalize Dispatches and related entities
+        const rawDispatches = dispatchesData.dispatches || [];
+        const normalizedDispatches = [];
+        const normalizedPods = [];
+        const normalizedLpjs = [];
+        const normalizedChecklists = [];
+
+        rawDispatches.forEach(d => {
+          let status = 'PLANNED';
+          if (d.status === 'ASSIGNED') status = 'READY';
+          if (d.status === 'DISPATCHED') status = 'IN TRANSIT';
+          if (d.status === 'DELIVERED') status = 'DELIVERED';
+          if (d.status === 'COMPLETED') status = 'COMPLETED';
+
+          normalizedDispatches.push({
+            id: d.id,
+            number: d.id, // Some UI might expect number
+            sjNumber: d.suratJalan?.documentNumber,
+            truckPlate: d.vehicle?.plateNumber,
+            driverName: d.driver?.name,
+            status: status,
+            priority: 'standard', // default mock
+            createdAt: d.createdAt,
+          });
+
+          if (d.pod) {
+            normalizedPods.push({
+              id: d.pod.id,
+              sjNumber: d.suratJalan?.documentNumber,
+              receivedBy: d.pod.receivedBy,
+              notes: d.pod.notes,
+              createdAt: d.pod.receivedAt || d.pod.createdAt,
+              photos: d.pod.photos ? JSON.parse(d.pod.photos) : [],
+            });
+          }
+
+          if (d.lpj) {
+            normalizedLpjs.push({
+              id: d.lpj.id,
+              number: d.lpj.id,
+              sjNumber: d.suratJalan?.documentNumber,
+              status: 'APPROVED', // Assuming seed LPJs are approved
+              driverName: d.driver?.name,
+              truckPlate: d.vehicle?.plateNumber,
+              totalAmount: d.lpj.expenses ? JSON.parse(d.lpj.expenses).reduce((sum, e) => sum + e.amount, 0) : 0,
+              expenses: d.lpj.expenses ? JSON.parse(d.lpj.expenses) : [],
+              createdAt: d.lpj.createdAt,
+            });
+          }
+
+          if (d.vehicleChecklist || d.driverChecklist) {
+            normalizedChecklists.push({
+              id: d.vehicleChecklist?.id || d.id,
+              sjNumber: d.suratJalan?.documentNumber,
+              status: d.gateCheckStatus === 'PASSED' ? 'PRE-DEPARTURE DONE' : 'PENDING',
+              driverName: d.driver?.name,
+              truckPlate: d.vehicle?.plateNumber,
+              createdAt: d.createdAt,
+            });
+          }
+        });
+
+        dispatch({ type: 'DISPATCHES_SET', payload: normalizedDispatches });
+        dispatch({ type: 'POD_SET', payload: normalizedPods });
+        dispatch({ type: 'LPJ_SET', payload: normalizedLpjs });
+        dispatch({ type: 'CHECKLIST_SET', payload: normalizedChecklists });
+
       } catch (err) {
         console.error('Failed to fetch initial data:', err);
       }
@@ -301,8 +424,10 @@ export function FleetOpsProvider({ children }) {
         });
         const result = await response.json();
         if (result.success) {
-          // Update local state
-          dispatch({ type: 'SJ_CREATE', payload: { ...data, id: result.suratJalan.id } });
+          // Normalize the DB response to match UI shape and update local state
+          const sjFromDB = result.suratJalan;
+          const normalizedSJ = normalizeSJFromDB(sjFromDB, data);
+          dispatch({ type: 'SJ_CREATE', payload: normalizedSJ });
         } else {
           throw new Error(result.error || 'Failed to create SJ');
         }

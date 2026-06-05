@@ -66,7 +66,7 @@ export default function AddNewCustomer() {
 
   return (
     <Layout>
-      <TopNavBar title="Add New Customer" breadcrumbs={['Customers', 'Add New Customer']} />
+      <TopNavBar title="Add New Customer" breadcrumbs={['Customers', 'Add New Customer']} showBack={true} />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-8">

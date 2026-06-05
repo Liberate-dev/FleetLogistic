@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Modal from '../components/ui/Modal';
 import FileUpload from '../components/ui/FileUpload';
@@ -17,13 +17,14 @@ const LPJ_STATUS = {
 export default function LPJKeuangan() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { sjNumber } = useParams();
   const { suratJalan, dispatches, lpjRecords, createLPJ, updateLPJ, changeSJStatus, setLoading, addNotification } = useFleetOps();
 
   // LPJ number
   const [lpjNumber, setLpjNumber] = useState('');
 
   // SJ Selection
-  const [selectedSJ, setSelectedSJ] = useState(searchParams.get('sj') || '');
+  const [selectedSJ, setSelectedSJ] = useState(sjNumber || searchParams.get('sj') || '');
 
   // Driver Info
   const [driverName, setDriverName] = useState('');
@@ -39,14 +40,34 @@ export default function LPJKeuangan() {
   // Notes
   const [notes, setNotes] = useState('');
 
+  // Submitted By - auto-populated from current user, locked from editing
+  const [submittedBy, setSubmittedBy] = useState(auditLogger.currentUser || 'System Admin');
+
   // Confirmation
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 
-  // Generate LPJ number
+  // Generate LPJ number or load existing
   useEffect(() => {
+    if (sjNumber) {
+      const existingLpj = lpjRecords.find(l => l.sjNumber === sjNumber);
+      if (existingLpj) {
+        setLpjNumber(existingLpj.id);
+        setSelectedSJ(existingLpj.sjNumber);
+        setDriverName(existingLpj.driverName || '');
+        setTruckPlate(existingLpj.truckPlate || '');
+        setSubmittedBy(existingLpj.submittedBy || auditLogger.currentUser || 'System Admin');
+        setExpenses(existingLpj.expenses || []);
+        if (existingLpj.cashAdvance) {
+          setUangJalanReceived(existingLpj.cashAdvance.uangJalan || '');
+          setDanaCadanganReceived(existingLpj.cashAdvance.danaCadangan || '');
+        }
+        setNotes(existingLpj.notes || '');
+        return;
+      }
+    }
     const result = documentNumberingService.generateNumber('LPJ', 'malang');
     setLpjNumber(result.number);
-  }, []);
+  }, [sjNumber, lpjRecords]);
 
   // Available SJ: only DELIVERED or COMPLETED status (must have POD ideally)
   const availableSJ = useMemo(() =>
@@ -146,9 +167,10 @@ export default function LPJKeuangan() {
   // Validate
   const canSubmit = useMemo(() => {
     return selectedSJ &&
+      submittedBy &&
       expenses.length > 0 &&
       expenses.every(e => e.amount && Number(e.amount) > 0);
-  }, [selectedSJ, expenses]);
+  }, [selectedSJ, submittedBy, expenses]);
 
   // Submit
   const handleSubmit = () => {
@@ -161,6 +183,7 @@ export default function LPJKeuangan() {
       status: LPJ_STATUS.PENDING,
       driverName,
       truckPlate,
+      submittedBy,
       expenses,
       expenseByCategory,
       totalAmount: totalExpenses,
@@ -266,29 +289,48 @@ export default function LPJKeuangan() {
               {/* SJ Preview */}
               {selectedSJData && (
                 <div className="p-4 rounded-xl bg-primary/5 border border-primary/20 space-y-3">
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-[10px] font-bold text-primary uppercase tracking-wider">Referensi SJ</p>
+                    <StatusBadge status={selectedSJData.status} />
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Nomor SJ</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.number}</p>
+                      <p className="font-bold text-on-surface font-mono">{selectedSJData.number}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Klien</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.clientName}</p>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Dibuat Oleh SJ</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.createdByName || '-'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-400 uppercase font-bold">Klien (Untuk Siapa)</p>
+                      <p className="font-bold text-on-surface">{selectedSJData.clientName || '-'}</p>
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase font-bold">Tujuan</p>
-                      <p className="font-bold text-on-surface">{selectedSJData.destination}</p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 uppercase font-bold">Status</p>
-                      <StatusBadge status={selectedSJData.status} />
+                      <p className="font-bold text-on-surface">{selectedSJData.destination || '-'}</p>
                     </div>
                   </div>
+                  {selectedSJData.items && selectedSJData.items.length > 0 && (
+                    <div className="border-t border-primary/10 pt-2">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1 flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px] text-primary">inventory_2</span>
+                        Cargo ({selectedSJData.items.length} item)
+                      </p>
+                      {selectedSJData.items.map((item, idx) => (
+                        <div key={idx} className="flex justify-between text-xs text-slate-600">
+                          <span className="font-mono text-primary">{item.sku || item.material?.code}</span>
+                          <span>{item.name || item.material?.name}</span>
+                          <span className="font-bold">{item.qty || item.quantity} {item.unit}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Driver & Truck Info */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              {/* Driver & Truck Info + Submitted By */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Driver</label>
                   <input
@@ -309,9 +351,20 @@ export default function LPJKeuangan() {
                     className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary focus:outline-none"
                   />
                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    Disubmit Oleh *
+                    <span className="material-symbols-outlined text-[12px] text-slate-400" title="Otomatis dari user yang login">lock</span>
+                  </label>
+                  <div className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-bold text-on-surface flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-primary">account_circle</span>
+                    <span>{submittedBy}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
+
 
           {/* Section 2: Cash Advance Summary */}
           <section className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -321,7 +374,7 @@ export default function LPJKeuangan() {
             </div>
 
             <div className="lg:col-span-8 glass-panel rounded-2xl p-6 md:p-8 shadow-sm hover:shadow-md transition-shadow">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Uang Jalan</p>
                   <p className="text-lg font-bold text-on-surface mt-1">{formatCurrency(uangJalanReceived)}</p>
@@ -483,7 +536,7 @@ export default function LPJKeuangan() {
                 <span className="material-symbols-outlined text-primary">account_balance_wallet</span>
                 Saldo & Sisa Dana
               </h3>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 text-center">
                   <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Cash Advance</p>
                   <p className="text-lg font-bold text-on-surface mt-1">{formatCurrency(totalCashAdvance)}</p>
@@ -577,7 +630,7 @@ export default function LPJKeuangan() {
         <div className="space-y-4">
           <p className="text-sm text-slate-500">You are about to submit LPJ with the following details:</p>
 
-          <div className="grid grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
             <div>
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">LPJ Number</p>
               <p className="text-sm font-bold text-on-surface">{lpjNumber}</p>

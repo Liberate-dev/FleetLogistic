@@ -33,9 +33,9 @@ const navGroups = [
   }
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = true }) {
   return (
-    <aside className="h-screen sticky top-0 left-0 w-64 bg-slate-50 border-r border-slate-200 dark:bg-[#121619] dark:border-slate-800 flex flex-col p-4 gap-1 z-50 shrink-0 shadow-sm">
+    <aside className={`h-screen sticky top-0 left-0 bg-slate-50 border-r border-slate-200 dark:bg-[#121619] dark:border-slate-800 flex flex-col p-4 gap-1 z-0 shrink-0 shadow-sm transition-all duration-300 ${isOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
       <div className="flex items-center gap-3 px-4 py-4 mb-6">
         <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-container rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/30">
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>

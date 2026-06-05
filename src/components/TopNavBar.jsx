@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLayout } from '../context/LayoutContext';
 
-export default function TopNavBar({ title, breadcrumbs }) {
+export default function TopNavBar({ title, breadcrumbs, showBack = false }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { setMobileNavOpen } = useLayout();
@@ -11,7 +11,7 @@ export default function TopNavBar({ title, breadcrumbs }) {
   return (
     <header className="w-full h-16 sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-outline-variant/20 flex items-center justify-between px-4 md:px-8 transition-all shrink-0">
       <div className="flex items-center gap-3 md:gap-4">
-        {!isDashboard && (
+        {showBack && (
           <button onClick={() => navigate(-1)} className="w-8 h-8 flex items-center justify-center text-slate-500 hover:text-primary hover:bg-primary/10 rounded-full transition-all" title="Go Back">
              <span className="material-symbols-outlined text-[20px]">arrow_back</span>
           </button>

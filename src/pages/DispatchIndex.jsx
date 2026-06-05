@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/ui/StatusBadge';
 import { useFleetOps } from '../context';
@@ -22,6 +22,7 @@ const PRIORITY_CONFIG = {
 };
 
 export default function DispatchIndex() {
+  const navigate = useNavigate();
   const { dispatches, suratJalan } = useFleetOps();
 
   const dispatchList = useMemo(() => {
@@ -44,8 +45,6 @@ export default function DispatchIndex() {
     inTransit: dispatchList.filter(d => d.status === DISPATCH_STATUS.IN_TRANSIT).length,
     completed: dispatchList.filter(d => d.status === DISPATCH_STATUS.COMPLETED).length,
   }), [dispatchList]);
-
-  const formatCurrency = (val) => `Rp ${Number(val || 0).toLocaleString('id-ID')}`;
 
   return (
     <Layout>
@@ -122,57 +121,58 @@ export default function DispatchIndex() {
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Dispatch ID</th>
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Related SJ</th>
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Destination</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Assigned Truck</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Operator</th>
+                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Truck</th>
+                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Driver</th>
+                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Created By</th>
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Priority</th>
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Status</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Est. Cost</th>
                       <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Created</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                    {dispatchList.map((item, i) => (
-                      <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-on-surface font-mono">{item.number}</div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <Link to={`/sj/${item.sjNumber}`} className="text-primary font-bold underline hover:text-[#3a533a]">{item.sjNumber}</Link>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="text-on-surface font-medium">{item.sjDestination}</div>
-                          <div className="text-xs text-slate-400">{item.sjClient}</div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-on-surface font-mono">{item.truckPlate}</div>
-                          <div className="text-xs text-slate-400">{item.truckId}</div>
-                        </td>
-                        <td className="py-4 px-6 text-on-surface">{item.driverName}</td>
-                        <td className="py-4 px-6">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] uppercase font-bold rounded-md ${
-                            item.priority === 'critical' ? 'bg-error/10 text-error border border-error/20' :
-                            item.priority === 'high' ? 'bg-primary/10 text-primary border border-primary/20' :
-                            'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600'
-                          }`}>
-                            <span className="material-symbols-outlined text-[12px]">{item.priorityConfig.icon}</span>
-                            {item.priorityConfig.label}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6">
-                          <StatusBadge status={item.status} />
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="font-bold text-on-surface">
-                            {item.costEstimate ? formatCurrency(item.costEstimate.total) : '-'}
-                          </div>
-                        </td>
-                        <td className="py-4 px-6">
-                          <div className="text-xs text-slate-500">
-                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                    {dispatchList.map((item, i) => {
+                      const sj = suratJalan.find(s => s.number === item.sjNumber);
+                      return (
+                        <tr key={item.id} onClick={() => navigate(`/dispatch/${item.id}`)} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
+                          <td className="py-4 px-6">
+                            <div className="font-bold text-on-surface font-mono">{item.number}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <Link to={`/sj/${item.sjNumber}`} className="text-primary font-bold underline hover:text-[#3a533a]">{item.sjNumber}</Link>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="text-on-surface font-medium">{item.sjDestination}</div>
+                            <div className="text-xs text-slate-400">{item.sjClient}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="font-bold text-on-surface font-mono">{item.truckPlate}</div>
+                            <div className="text-xs text-slate-400">{item.truckId}</div>
+                          </td>
+                          <td className="py-4 px-6 text-on-surface">{item.driverName}</td>
+                          <td className="py-4 px-6">
+                            <div className="text-sm text-on-surface">{sj?.createdByName || '-'}</div>
+                          </td>
+                          <td className="py-4 px-6">
+                            <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] uppercase font-bold rounded-md ${
+                              item.priority === 'critical' ? 'bg-error/10 text-error border border-error/20' :
+                              item.priority === 'high' ? 'bg-primary/10 text-primary border border-primary/20' :
+                              'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600'
+                            }`}>
+                              <span className="material-symbols-outlined text-[12px]">{item.priorityConfig.icon}</span>
+                              {item.priorityConfig.label}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6">
+                            <StatusBadge status={item.status} />
+                          </td>
+                          <td className="py-4 px-6">
+                            <div className="text-xs text-slate-500">
+                              {item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

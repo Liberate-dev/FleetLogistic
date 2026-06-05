@@ -12,6 +12,25 @@ const BRANCH_CODES = {
 class DocumentNumberingService {
   constructor() {
     this.storageKey = 'fleet_ops_doc_numbers';
+    this.formatKey = 'fleet_ops_doc_format';
+  }
+
+  getFormat() {
+    return localStorage.getItem(this.formatKey) || '{docType}/{branch}/{year}/{month}/{sequence}';
+  }
+
+  setFormat(format) {
+    localStorage.setItem(this.formatKey, format);
+  }
+
+  _buildNumberString(docType, branchCode, year, month, sequence, formatOverride = null) {
+    const format = formatOverride || this.getFormat();
+    return format
+      .replace(/{docType}/g, docType)
+      .replace(/{branch}/g, branchCode)
+      .replace(/{year}/g, year)
+      .replace(/{month}/g, month)
+      .replace(/{sequence}/g, String(sequence).padStart(4, '0'));
   }
 
   /**
@@ -34,8 +53,7 @@ class DocumentNumberingService {
 
     this._saveCounters(counters);
 
-    const sequenceStr = String(currentSequence).padStart(4, '0');
-    const number = `${docType}/${branchCode}/${year}/${month}/${sequenceStr}`;
+    const number = this._buildNumberString(docType, branchCode, year, month, currentSequence);
 
     return {
       number,
@@ -67,7 +85,14 @@ class DocumentNumberingService {
     const key = `${docType}/${branchCode}/${year}/${month}`;
     const next = (counters[key] || 0) + 1;
 
-    return String(next).padStart(4, '0');
+    return this._buildNumberString(docType, branchCode, year, month, next);
+  }
+
+  generatePreview(format) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return this._buildNumberString('SJ', 'MLG', year, month, 1234, format);
   }
 
   /**

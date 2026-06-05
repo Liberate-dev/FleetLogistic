@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/ui/StatusBadge';
 import { useFleetOps } from '../context';
@@ -12,6 +12,7 @@ const LPJ_STATUS_CONFIG = {
 
 export default function LPJIndex() {
   const { lpjRecords, suratJalan } = useFleetOps();
+  const navigate = useNavigate();
 
   const lpjList = useMemo(() => {
     return lpjRecords.map(lpj => {
@@ -60,7 +61,7 @@ export default function LPJIndex() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="glass-panel p-4 rounded-xl border border-slate-200/50 bg-white dark:bg-slate-800">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
@@ -138,7 +139,7 @@ export default function LPJIndex() {
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {lpjList.map((lpj) => (
-                      <tr key={lpj.id} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
+                      <tr key={lpj.id} onClick={() => navigate(`/lpj/${lpj.sjNumber}`)} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
                         <td className="py-4 px-6">
                           <div className="font-bold text-on-surface font-mono">{lpj.number}</div>
                         </td>

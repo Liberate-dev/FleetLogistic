@@ -18,6 +18,7 @@ import DriverIndex from './pages/DriverIndex';
 import UserIndex from './pages/UserIndex';
 import SJIndex from './pages/SJIndex';
 import DispatchIndex from './pages/DispatchIndex';
+import DispatchDetail from './pages/DispatchDetail';
 import PODIndex from './pages/PODIndex';
 import ProofOfDelivery from './pages/ProofOfDelivery';
 import LPJIndex from './pages/LPJIndex';
@@ -87,19 +88,19 @@ function Dashboard() {
 
   return (
     <Layout>
-      <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
-        <div className="max-w-7xl mx-auto space-y-8">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 relative z-10 animate-fade-in no-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="max-w-7xl mx-auto space-y-8 w-full">
           
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div>
               <h2 className="text-2xl md:text-3xl font-extrabold font-headline tracking-tight text-on-surface">Logistics Command Center</h2>
               <p className="text-sm text-slate-500 mt-1 font-medium">Real-time overview of fleet operations and deliveries.</p>
             </div>
-            <div className="flex gap-3">
-              <button onClick={handleExport} className="px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center gap-2 active:scale-95">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-4 sm:mt-0">
+              <button onClick={handleExport} className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 active:scale-95">
                 <span className="material-symbols-outlined text-[18px]">download</span> Export Report
               </button>
-              <Link to="/dispatch/new" className="px-4 py-2.5 bg-primary hover:bg-[#3a533a] text-white rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 flex items-center gap-2">
+              <Link to="/dispatch/new" className="w-full sm:w-auto px-4 py-2.5 bg-primary hover:bg-[#3a533a] text-white rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">add</span> New Dispatch
               </Link>
             </div>
@@ -135,12 +136,12 @@ function Dashboard() {
             
             {/* Chart / Analytics Area */}
             <div className="xl:col-span-2 glass-panel p-6 rounded-2xl border border-slate-200/50 shadow-sm flex flex-col bg-white dark:bg-slate-800">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                 <h3 className="text-lg font-bold font-headline text-on-surface flex items-center gap-2">
                   <span className="material-symbols-outlined text-primary">analytics</span>
                   Weekly Fleet Utilization
                 </h3>
-                <select className="bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none">
+                <select className="bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-600 dark:text-slate-300 pl-3 pr-8 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 outline-none">
                   <option>This Week</option>
                   <option>Last Week</option>
                   <option>This Month</option>
@@ -196,13 +197,13 @@ function Dashboard() {
 
           {/* Active Routes Table */}
           <div className="glass-panel p-6 rounded-2xl border border-slate-200/50 shadow-sm bg-white dark:bg-slate-800">
-            <div className="flex items-center justify-between mb-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
               <h3 className="text-lg font-bold font-headline text-on-surface flex items-center gap-2">
                 <span className="material-symbols-outlined text-tertiary">alt_route</span>
                 Live Deployments
               </h3>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mr-4">
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mr-0 sm:mr-4">
                   <span className="w-2 h-2 rounded-full bg-primary animate-pulse"></span> Live Update
                 </div>
                 <button className="p-1.5 rounded-lg text-slate-400 hover:text-primary hover:bg-primary/10 transition-colors">
@@ -291,6 +292,7 @@ function App() {
       <Route path="/customers/new" element={<AddNewCustomer />} />
       <Route path="/users/new" element={<AddNewUser />} />
       <Route path="/dispatch/new" element={<NewDispatch />} />
+      <Route path="/dispatch/:id" element={<DispatchDetail />} />
       <Route path="/materials/new" element={<NewMaterial />} />
       <Route path="/sj/new" element={<CreateNewSJ />} />
       <Route path="/checklist/new" element={<VehicleChecklist />} />

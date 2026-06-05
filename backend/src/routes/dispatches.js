@@ -40,7 +40,11 @@ router.get('/', async (req, res, next) => {
             }
           },
           vehicle: { select: { id: true, plateNumber: true, type: true } },
-          driver: { select: { id: true, name: true, employeeId: true } }
+          driver: { select: { id: true, name: true, employeeId: true } },
+          pod: true,
+          lpj: true,
+          vehicleChecklist: true,
+          driverChecklist: true
         },
         orderBy: { createdAt: 'desc' },
         take: parseInt(limit),

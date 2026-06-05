@@ -69,7 +69,7 @@ export default function NewMaterial() {
 
   return (
     <Layout>
-      <TopNavBar title="New Material Registration" breadcrumbs={['Materials', 'Add Material']} />
+      <TopNavBar title="New Material Registration" breadcrumbs={['Materials', 'Add Material']} showBack={true} />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-8 relative z-10 animate-fade-in">
         <div className="max-w-6xl mx-auto space-y-8">

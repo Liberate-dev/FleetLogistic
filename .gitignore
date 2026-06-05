@@ -36,3 +36,5 @@ dist-ssr
 backend/node_modules
 backend/dist
 backend/*.db
+
+.vercel

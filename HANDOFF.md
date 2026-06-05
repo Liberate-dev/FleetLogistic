@@ -1,7 +1,7 @@
 # Fleet Ops — Handoff Document
 
-> **Date:** April 14, 2026 (Updated)
-> **Status:** Phases 1-10 Complete ✅
+> **Date:** June 2, 2026 (Updated)
+> **Status:** Phases 1-11 Complete ✅
 > **Build Status:** ✅ Compiles successfully (`npm run build` passes)
 
 ---
@@ -81,6 +81,65 @@
 ### Phase 10: Integration Testing ✅
 - Build passes: `npm run build` ✅ (574KB JS, 65KB CSS)
 - All routes registered in App.jsx
+
+### Phase 11: POD & Dispatch Enhancements (June 2, 2026) ✅
+
+#### Task 1: Digital Signature Canvas for POD
+| File | What Changed |
+|---|---|
+| `src/components/ui/SignatureCanvas.jsx` | **NEW** — Canvas-based signature component with mouse/touch drawing, save as PNG dataUrl, clear button |
+| `src/pages/ProofOfDelivery.jsx` | **REVISED** — Added signature sections in Receiver Info (left: receiver TTD, right: driver TTD). Each with "Add Signature" button that opens modal. Removed "Foto Surat TTD" photo section (tandaTerimaPhotos). Signature stored in POD data as `receiverSignature`, `driverSignature`. |
+| `src/App.jsx` | No changes needed |
+
+**Signature Flow:**
+- Click "Tambah TTD Penerima" / "Tambah TTD Driver" → opens modal with canvas
+- Draw signature with mouse/touch
+- Click "Simpan" → saves as PNG dataUrl
+- Display shows saved signature thumbnail with "Ubah" on hover
+
+#### Task 2: Dispatch Detail Page
+| File | What Changed |
+|---|---|
+| `src/pages/DispatchDetail.jsx` | **NEW** — Detail page showing: status, createdBy, SJ info, truck/driver details, cost estimation breakdown, timestamps |
+| `src/App.jsx` | Added route: `/dispatch/:id` |
+| `src/pages/DispatchIndex.jsx` | **REVISED** — Row click now navigates to `/dispatch/${item.id}`. Added `useNavigate`. |
+
+**Detail Page Features:**
+- Status card with badge + "Dibuat Oleh" from SJ.createdByName
+- SJ info with clickable link to SJ detail
+- Truck details (plate, type, capacity)
+- Driver details (name, phone, SIM)
+- Cost breakdown (BBM, Toll, Uang Jalan, Total)
+- Timestamps (created, dispatched, delivered, completed)
+
+#### Task 3: Dispatch List Columns
+| File | What Changed |
+|---|---|
+| `src/pages/DispatchIndex.jsx` | **REVISED** — Removed "Est. Cost" column. Added "Created By" column (from sj.createdByName). Renamed columns: "Operator" → "Driver", "Assigned Truck" → "Truck". Removed unused `formatCurrency` function. |
+
+**Updated Headers:**
+```
+Dispatch ID | Related SJ | Destination | Truck | Driver | Created By | Priority | Status | Created
+```
+
+#### Task 4: POD Number Display
+| File | Status |
+|---|---|
+| `documentNumbering.js` | Already working — generates `POD/MLG/YYYY/MM/NNNN` format |
+| `ProofOfDelivery.jsx` | Displays POD number in header and confirmation modal |
+| `PODIndex.jsx` | Already displays `pod.number` in table |
+| **Status:** ✅ Working as expected |
+
+#### Task 5: Date Validation
+| File | What Changed |
+|---|---|
+| `src/pages/CreateNewSJ.jsx` | **REVISED** — Added `min` attribute (today's date) to loadingDate input. Added error message if date is in the past. |
+| `src/pages/ProofOfDelivery.jsx` | **REVISED** — Added `min` attribute (current datetime) to receivedAt datetime input. |
+
+**Validation Logic:**
+- `loadingDate`: Cannot select date before today
+- `receivedAt`: Cannot select datetime before now
+- Visual feedback: red error message below input if invalid
 
 ---
 

@@ -4,6 +4,7 @@ const LayoutContext = createContext(null);
 
 export function LayoutProvider({ children }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Lock scroll when nav open
   useEffect(() => {
@@ -17,7 +18,7 @@ export function LayoutProvider({ children }) {
     };
   }, [mobileNavOpen]);
 
-  const value = { mobileNavOpen, setMobileNavOpen };
+  const value = { mobileNavOpen, setMobileNavOpen, sidebarOpen, setSidebarOpen };
 
   return (
     <LayoutContext.Provider value={value}>
@@ -29,8 +30,12 @@ export function LayoutProvider({ children }) {
 export function useLayout() {
   const context = useContext(LayoutContext);
   if (!context) {
-    // Return safe defaults when used outside provider (e.g., during development)
-    return { mobileNavOpen: false, setMobileNavOpen: () => {} };
+    return { 
+      mobileNavOpen: false, 
+      setMobileNavOpen: () => {},
+      sidebarOpen: true,
+      setSidebarOpen: () => {}
+    };
   }
   return context;
 }
