@@ -80,6 +80,99 @@ export default function Reports() {
       }));
   }, [pods]);
 
+  const clientPerformanceData = useMemo(() => {
+    const clients = {};
+    suratJalan.forEach(sj => {
+      const name = sj.customer?.name || sj.clientName || 'General Client';
+      if (!clients[name]) {
+        clients[name] = {
+          name,
+          totalShipments: 0,
+          completed: 0,
+          inTransit: 0,
+          podsCount: 0,
+          goodPodsCount: 0,
+        };
+      }
+      clients[name].totalShipments += 1;
+      if (sj.status === 'COMPLETED') {
+        clients[name].completed += 1;
+      } else if (['ASSIGNED', 'DISPATCHED', 'DELIVERED', 'IN TRANSIT'].includes(sj.status)) {
+        clients[name].inTransit += 1;
+      }
+
+      // Find POD
+      const pod = pods.find(p => p.sjNumber === sj.number);
+      if (pod) {
+        clients[name].podsCount += 1;
+        const condition = (pod.deliveryCondition || pod.condition || '').toLowerCase();
+        if (condition === 'good' || condition === 'received' || !condition) {
+          clients[name].goodPodsCount += 1;
+        }
+      }
+    });
+
+    return Object.values(clients);
+  }, [suratJalan, pods]);
+
+  const monthlyRevenueData = useMemo(() => {
+    const months = {};
+    suratJalan.forEach(sj => {
+      const dateStr = sj.loadingDate || sj.date || sj.createdAt;
+      if (!dateStr) return;
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return;
+      
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleDateString('id-ID', { year: 'numeric', month: 'long' });
+
+      if (!months[key]) {
+        months[key] = {
+          key,
+          label: monthLabel,
+          trips: 0,
+          tonnage: 0,
+          revenue: 0,
+          lpjCost: 0,
+        };
+      }
+
+      months[key].trips += 1;
+      
+      // Tonnage
+      let weight = parseFloat(sj.totalWeight);
+      if (isNaN(weight) || weight <= 0) {
+        const itemWeight = sj.items?.reduce((sum, item) => sum + Number(item.weight || 0), 0) || 0;
+        weight = itemWeight / 1000;
+      }
+      months[key].tonnage += weight;
+
+      // Simulated Revenue based on destination & weight
+      const dest = (sj.destination || '').toLowerCase();
+      let baseRate = 1200000;
+      let perTonRate = 90000;
+      if (dest.includes('surabaya')) {
+        baseRate = 1500000;
+        perTonRate = 100000;
+      } else if (dest.includes('jakarta')) {
+        baseRate = 5000000;
+        perTonRate = 120000;
+      } else if (dest.includes('malang')) {
+        baseRate = 600000;
+        perTonRate = 80000;
+      }
+      const calculatedRevenue = baseRate + (weight * perTonRate);
+      months[key].revenue += calculatedRevenue;
+
+      // LPJ Costs for this SJ
+      const sjLpjs = lpjRecords.filter(lpj => lpj.sjNumber === sj.number);
+      const lpjSum = sjLpjs.reduce((sum, lpj) => sum + Number(lpj.totalAmount || 0), 0);
+      months[key].lpjCost += lpjSum;
+    });
+
+    return Object.values(months).sort((a, b) => b.key.localeCompare(a.key));
+  }, [suratJalan, lpjRecords]);
+
   const formatCurrency = (val) => `Rp ${Number(val || 0).toLocaleString('id-ID')}`;
 
   const renderReport = () => {
@@ -336,6 +429,148 @@ export default function Reports() {
                 </table>
               </>
             )}
+          </>
+        );
+
+      case 'client_perf':
+        const totalClients = clientPerformanceData.length;
+        const totalShipmentsAll = clientPerformanceData.reduce((sum, c) => sum + c.totalShipments, 0);
+        const totalPodsAll = clientPerformanceData.reduce((sum, c) => sum + c.podsCount, 0);
+        const totalGoodPodsAll = clientPerformanceData.reduce((sum, c) => sum + c.goodPodsCount, 0);
+        const averageSuccessRate = totalPodsAll > 0 ? Math.round((totalGoodPodsAll / totalPodsAll) * 100) : 100;
+        
+        return (
+          <>
+            <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
+              <div>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Client Delivery Performance</h1>
+                <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {totalClients} clients</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-primary tracking-widest uppercase">Fleet Ops</p>
+                <p className="text-xs text-slate-500">Analytics Division</p>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Active Clients</p>
+                <p className="text-2xl font-black text-primary">{totalClients}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Deliveries</p>
+                <p className="text-2xl font-black">{totalShipmentsAll}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Avg. Success Rate</p>
+                <p className={`text-2xl font-black ${averageSuccessRate >= 95 ? 'text-primary' : averageSuccessRate >= 80 ? 'text-amber-600' : 'text-error'}`}>{averageSuccessRate}%</p>
+              </div>
+            </div>
+
+            <table className="w-full text-left text-sm mb-8">
+              <thead>
+                <tr className="border-b border-slate-300">
+                  <th className="py-2 font-bold uppercase text-xs">Client Name</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">Total Shipments</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">Completed</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">In Transit</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">PODs Received</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">Success Rate</th>
+                  <th className="py-2 font-bold uppercase text-xs text-right">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {clientPerformanceData.map((c, i) => {
+                  const successRate = c.podsCount > 0 ? Math.round((c.goodPodsCount / c.podsCount) * 100) : 100;
+                  let statusColor = 'bg-primary/10 text-primary';
+                  let statusText = 'Excellent';
+                  if (successRate < 80) {
+                    statusColor = 'bg-error/10 text-error';
+                    statusText = 'Critical';
+                  } else if (successRate < 95) {
+                    statusColor = 'bg-amber-100 text-amber-700';
+                    statusText = 'Needs Attention';
+                  }
+                  return (
+                    <tr key={i}>
+                      <td className="py-3 font-semibold text-slate-800">{c.name}</td>
+                      <td className="py-3 text-center">{c.totalShipments}</td>
+                      <td className="py-3 text-center">{c.completed}</td>
+                      <td className="py-3 text-center">{c.inTransit}</td>
+                      <td className="py-3 text-center">{c.podsCount}</td>
+                      <td className="py-3 text-center font-bold">{successRate}%</td>
+                      <td className="py-3 text-right">
+                        <span className={`text-[10px] px-2 py-1 rounded font-bold uppercase ${statusColor}`}>{statusText}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        );
+
+      case 'revenue':
+        const totalRevenue = monthlyRevenueData.reduce((sum, m) => sum + m.revenue, 0);
+        const totalTonnage = monthlyRevenueData.reduce((sum, m) => sum + m.tonnage, 0);
+        const totalTrips = monthlyRevenueData.reduce((sum, m) => sum + m.trips, 0);
+        const avgRevPerTrip = totalTrips > 0 ? Math.round(totalRevenue / totalTrips) : 0;
+        
+        return (
+          <>
+            <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
+              <div>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Monthly Revenue & Tonnage</h1>
+                <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {monthlyRevenueData.length} months</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-primary tracking-widest uppercase">Fleet Ops</p>
+                <p className="text-xs text-slate-500">Finance Division</p>
+              </div>
+            </header>
+
+            <div className="grid grid-cols-3 gap-6 mb-8">
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Revenue</p>
+                <p className="text-2xl font-black text-primary">{formatCurrency(totalRevenue)}</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Total Tonnage</p>
+                <p className="text-2xl font-black text-slate-700">{totalTonnage.toFixed(2)} Tons</p>
+              </div>
+              <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                <p className="text-xs font-bold text-slate-500 uppercase mb-1">Avg Revenue / Trip</p>
+                <p className="text-2xl font-black text-emerald-600">{formatCurrency(avgRevPerTrip)}</p>
+              </div>
+            </div>
+
+            <table className="w-full text-left text-sm mb-8">
+              <thead>
+                <tr className="border-b border-slate-300">
+                  <th className="py-2 font-bold uppercase text-xs">Month</th>
+                  <th className="py-2 font-bold uppercase text-xs text-center">Total Trips</th>
+                  <th className="py-2 font-bold uppercase text-xs text-right">Tonnage</th>
+                  <th className="py-2 font-bold uppercase text-xs text-right">Revenue</th>
+                  <th className="py-2 font-bold uppercase text-xs text-right">Est. Expense (LPJ)</th>
+                  <th className="py-2 font-bold uppercase text-xs text-right">Est. Margin</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {monthlyRevenueData.map((m, i) => {
+                  const margin = m.revenue - m.lpjCost;
+                  return (
+                    <tr key={i}>
+                      <td className="py-3 font-semibold text-slate-800">{m.label}</td>
+                      <td className="py-3 text-center">{m.trips}</td>
+                      <td className="py-3 text-right">{m.tonnage.toFixed(2)} Tons</td>
+                      <td className="py-3 text-right font-semibold text-primary">{formatCurrency(m.revenue)}</td>
+                      <td className="py-3 text-right text-slate-600">{m.lpjCost > 0 ? formatCurrency(m.lpjCost) : '-'}</td>
+                      <td className="py-3 text-right font-bold text-emerald-600">{formatCurrency(margin)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </>
         );
 

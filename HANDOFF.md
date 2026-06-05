@@ -160,6 +160,11 @@ Dispatch ID | Related SJ | Destination | Truck | Driver | Created By | Priority 
 | `src/index.css` | Added `@page { size: A4; margin: 0; }` print rule to suppress default browser-injected header/footer (removing "localhost"). |
 | `src/components/ui/DocumentPrintLayout.jsx` | Adjusted padding using responsive classes (`print:px-12 print:py-12`) to compensate for zero page margins. Added a custom printed footer ("Halaman: 1 / 1", "Dicetak oleh: ..."). Adjusted signature gap spacing with `print:mb-24` to prevent clipping and fit the document on a single page. |
 
+#### Task 4: Complete Missing Reports (Client Performance & Monthly Revenue/Tonnage)
+| File | What Changed |
+|---|---|
+| `src/pages/Reports.jsx` | Implemented `client_perf` (Client Delivery Performance) and `revenue` (Monthly Revenue & Tonnage) reports. Added `useMemo` hooks to compute client KPIs (deliveries, transit status, success rate based on POD conditions) and monthly financial/cargo aggregates (total trips, tonnage, destination-based simulated revenues, and net margins comparing revenue to LPJ costs). |
+
 ---
 
 ## SJ Status Flow (Auto-Transitions)
