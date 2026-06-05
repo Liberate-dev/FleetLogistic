@@ -413,7 +413,21 @@ export default function ProofOfDelivery() {
                 <div className="lg:col-span-8 sm:glass-panel sm:rounded-2xl sm:p-6 md:p-8 sm:shadow-sm space-y-4 sm:space-y-6 sm:hover:shadow-md transition-shadow">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Penerima *</label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Nama Penerima *</label>
+                        {selectedSJData?.contactPerson && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setReceiverName(selectedSJData.contactPerson);
+                              if (selectedSJData.contactPhone) setReceiverPhone(selectedSJData.contactPhone);
+                            }}
+                            className="text-[10px] text-primary hover:underline font-bold transition-all"
+                          >
+                            Salin Kontak SJ
+                          </button>
+                        )}
+                      </div>
                       <input
                         type="text"
                         value={receiverName}
