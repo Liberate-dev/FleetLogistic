@@ -375,7 +375,7 @@ export function FleetOpsProvider({ children }) {
             }
             normalizedPods.push({
               id: d.pod.id,
-              number: d.pod.id,
+              number: extraFields.number || (d.suratJalan?.documentNumber ? d.suratJalan.documentNumber.replace(/^SJ/i, 'POD') : `POD-${d.pod.id.slice(0, 8).toUpperCase()}`),
               sjNumber: d.suratJalan?.documentNumber,
               receivedBy: d.pod.receivedBy,
               receiverName: d.pod.receivedBy,

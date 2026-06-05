@@ -65,7 +65,7 @@ export default function ProofOfDelivery() {
     if (sjNumber) {
       const existingPod = pods.find(p => p.sjNumber === sjNumber);
       if (existingPod) {
-        setPodNumber(existingPod.id);
+        setPodNumber(existingPod.number || existingPod.id);
         setSelectedSJ(existingPod.sjNumber);
         setReceiverName(existingPod.receiverName || '');
         setReceiverTitle(existingPod.receiverTitle || '');
@@ -88,9 +88,23 @@ export default function ProofOfDelivery() {
         return;
       }
     }
-    const result = documentNumberingService.generateNumber('POD', 'malang');
-    setPodNumber(result.number);
   }, [sjNumber, pods]);
+
+  // Derive POD number from selected Surat Jalan
+  useEffect(() => {
+    if (existingPod) {
+      setPodNumber(existingPod.number || existingPod.id);
+      return;
+    }
+    if (selectedSJ) {
+      const derived = selectedSJ.toUpperCase().startsWith('SJ')
+        ? selectedSJ.replace(/^SJ/i, 'POD')
+        : `POD/${selectedSJ}`;
+      setPodNumber(derived);
+    } else {
+      setPodNumber('');
+    }
+  }, [selectedSJ, existingPod]);
 
   // Available SJ: only DISPATCHED or DELIVERED status
   const availableSJ = useMemo(() =>
