@@ -51,7 +51,7 @@ export default function LPJKeuangan() {
     if (sjNumber) {
       const existingLpj = lpjRecords.find(l => l.sjNumber === sjNumber);
       if (existingLpj) {
-        setLpjNumber(existingLpj.id);
+        setLpjNumber(existingLpj.number || existingLpj.id);
         setSelectedSJ(existingLpj.sjNumber);
         setDriverName(existingLpj.driverName || '');
         setTruckPlate(existingLpj.truckPlate || '');
@@ -65,9 +65,24 @@ export default function LPJKeuangan() {
         return;
       }
     }
-    const result = documentNumberingService.generateNumber('LPJ', 'malang');
-    setLpjNumber(result.number);
   }, [sjNumber, lpjRecords]);
+
+  // Derive LPJ number from selected Surat Jalan
+  useEffect(() => {
+    const existingLpj = sjNumber ? lpjRecords.find(l => l.sjNumber === sjNumber) : null;
+    if (existingLpj) {
+      setLpjNumber(existingLpj.number || existingLpj.id);
+      return;
+    }
+    if (selectedSJ) {
+      const derived = selectedSJ.toUpperCase().startsWith('SJ')
+        ? selectedSJ.replace(/^SJ/i, 'LPJ')
+        : `LPJ/${selectedSJ}`;
+      setLpjNumber(derived);
+    } else {
+      setLpjNumber('');
+    }
+  }, [selectedSJ, sjNumber, lpjRecords]);
 
   // Available SJ: only DELIVERED or COMPLETED status (must have POD ideally)
   const availableSJ = useMemo(() =>

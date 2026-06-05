@@ -393,7 +393,7 @@ export function FleetOpsProvider({ children }) {
           if (d.lpj) {
             normalizedLpjs.push({
               id: d.lpj.id,
-              number: d.lpj.id,
+              number: d.suratJalan?.documentNumber ? d.suratJalan.documentNumber.replace(/^SJ/i, 'LPJ') : `LPJ-${d.lpj.id.slice(0, 8).toUpperCase()}`,
               sjNumber: d.suratJalan?.documentNumber,
               status: 'APPROVED', // Assuming seed LPJs are approved
               driverName: d.driver?.name,
