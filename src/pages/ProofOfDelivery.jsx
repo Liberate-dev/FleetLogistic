@@ -22,13 +22,13 @@ export default function ProofOfDelivery() {
   const { sjNumber } = useParams();
   const { suratJalan, pods, createPOD, updatePOD, changeSJStatus, setLoading, addNotification } = useFleetOps();
 
-  const existingPod = useMemo(() => pods.find(p => p.sjNumber === selectedSJ), [pods, selectedSJ]);
+  // SJ Selection
+  const [selectedSJ, setSelectedSJ] = useState(sjNumber || searchParams.get('sj') || '');
 
   // POD number
   const [podNumber, setPodNumber] = useState('');
 
-  // SJ Selection
-  const [selectedSJ, setSelectedSJ] = useState(sjNumber || searchParams.get('sj') || '');
+  const existingPod = useMemo(() => pods.find(p => p.sjNumber === selectedSJ), [pods, selectedSJ]);
 
   // Receiver Info
   const [receiverName, setReceiverName] = useState('');
@@ -739,27 +739,39 @@ export default function ProofOfDelivery() {
           <div className="w-full h-auto overflow-visible">
             <DocumentPrintLayout
               docType="POD"
-              docNumber={existingPod.number || existingPod.id}
-              date={new Date(existingPod.receivedAt || existingPod.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              status={existingPod.status}
+              docNumber={existingPod.number || existingPod.id || '-'}
+              date={(() => {
+                const dateVal = existingPod.receivedAt || existingPod.createdAt;
+                if (!dateVal) return '-';
+                const d = new Date(dateVal);
+                if (isNaN(d.getTime())) return '-';
+                return d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+              })()}
+              status={existingPod.status || 'RECEIVED'}
               metadata={[
                 { label: 'Dibuat Oleh', value: 'Sopir / Driver' },
-                { label: 'Tanggal Diterima', value: new Date(existingPod.receivedAt || existingPod.createdAt).toLocaleDateString('id-ID') },
+                { label: 'Tanggal Diterima', value: (() => {
+                  const dateVal = existingPod.receivedAt || existingPod.createdAt;
+                  if (!dateVal) return '-';
+                  const d = new Date(dateVal);
+                  if (isNaN(d.getTime())) return '-';
+                  return d.toLocaleDateString('id-ID');
+                })() },
                 { label: 'Tipe Dokumen', value: 'Bukti Serah Terima (POD)' },
                 { label: 'Kondisi Pengiriman', value: existingPod.deliveryCondition === 'good' ? 'Barang Diterima Baik' : existingPod.deliveryCondition === 'partial_damage' ? 'Sebagian Rusak' : existingPod.deliveryCondition === 'damaged' ? 'Barang Rusak' : 'Barang Hilang' },
-                { label: 'Nomor SJ Terkait', value: existingPod.sjNumber },
+                { label: 'Nomor SJ Terkait', value: existingPod.sjNumber || '-' },
               ]}
               parties={[
                 {
                   label: 'Penerima Barang',
-                  name: existingPod.receiverName || '-',
+                  name: existingPod.receiverName || existingPod.receivedBy || '-',
                   address: `Jabatan: ${existingPod.receiverTitle || '-'} \nTelp: ${existingPod.receiverPhone || '-'}`,
                   icon: 'person',
                 },
                 {
                   label: 'Pengirim (Driver)',
-                  name: selectedSJData?.driverName || 'Driver Operasional',
-                  address: `No. Polisi: ${selectedSJData?.truckPlate || '-'}`,
+                  name: selectedSJData?.dispatch?.driverName || selectedSJData?.driverName || 'Driver Operasional',
+                  address: `No. Polisi: ${selectedSJData?.dispatch?.truckPlate || selectedSJData?.truckPlate || '-'}`,
                   icon: 'local_shipping',
                 },
               ]}
@@ -769,7 +781,7 @@ export default function ProofOfDelivery() {
                     <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Detail Penerimaan & Catatan</h3>
                     <p className="text-sm text-slate-700 font-medium">{existingPod.notes || 'Diterima dalam kondisi baik dan lengkap.'}</p>
                   </div>
-                  {existingPod.status === 'POD DISCREPANCY' && (
+                  {(existingPod.status === 'POD DISCREPANCY' || existingPod.deliveryCondition !== 'good') && (
                     <div className="border border-red-200 rounded-xl p-4 bg-red-50/30">
                       <h3 className="font-bold text-red-800 text-xs uppercase tracking-wider mb-2">Detail Temuan Kerusakan / Kehilangan</h3>
                       <p className="text-sm text-red-700 font-medium">{existingPod.discrepancyDetails || 'Ada ketidaksesuaian jumlah atau kondisi barang.'}</p>
@@ -778,8 +790,8 @@ export default function ProofOfDelivery() {
                 </div>
               )}
               signatures={[
-                { label: 'Diterima Oleh (Penerima)', name: existingPod.receiverName, image: existingPod.receiverSignature },
-                { label: 'Diserahkan Oleh (Driver)', name: selectedSJData?.driverName || 'Driver', image: existingPod.driverSignature },
+                { label: 'Diterima Oleh (Penerima)', name: existingPod.receiverName || existingPod.receivedBy || '-', image: existingPod.receiverSignature },
+                { label: 'Diserahkan Oleh (Driver)', name: selectedSJData?.dispatch?.driverName || selectedSJData?.driverName || 'Driver', image: existingPod.driverSignature },
               ]}
               footerText="Dokumen ini sah secara digital sebagai tanda terima barang logistik Fleet Ops."
             />
