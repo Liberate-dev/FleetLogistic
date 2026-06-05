@@ -165,6 +165,25 @@ Dispatch ID | Related SJ | Destination | Truck | Driver | Created By | Priority 
 |---|---|
 | `src/pages/Reports.jsx` | Implemented `client_perf` (Client Delivery Performance) and `revenue` (Monthly Revenue & Tonnage) reports. Added `useMemo` hooks to compute client KPIs (deliveries, transit status, success rate based on POD conditions) and monthly financial/cargo aggregates (total trips, tonnage, destination-based simulated revenues, and net margins comparing revenue to LPJ costs). |
 
+### Phase 13: POD & LPJ Enhancements (June 5, 2026) ✅
+
+#### Task 1: View/Detail Mode for POD Page
+| File | What Changed |
+|---|---|
+| `src/pages/ProofOfDelivery.jsx` | Implemented read-only document layout in the viewport for existing PODs by directly rendering the `DocumentPrintLayout` (complete with photos, signatures, and notes) and hiding form inputs / submission buttons. |
+
+#### Task 2: Deterministic POD & LPJ Document Numbering
+| File | What Changed |
+|---|---|
+| `src/pages/ProofOfDelivery.jsx` | Derived new POD numbers dynamically from the selected Surat Jalan by replacing the `SJ` prefix with `POD` (e.g. `SJ/MLG/...` → `POD/MLG/...`). |
+| `src/pages/LPJKeuangan.jsx` | Derived new LPJ numbers dynamically from the selected Surat Jalan by replacing the `SJ` prefix with `LPJ` (e.g. `SJ/MLG/...` → `LPJ/MLG/...`). |
+| `src/context/FleetOpsContext.jsx` | Normalized and mapped seeded/loaded POD and LPJ data from SQLite to use the derived deterministic numbers instead of random UUIDs. |
+
+#### Task 3: Quick-Fill Receiver Info
+| File | What Changed |
+|---|---|
+| `src/pages/ProofOfDelivery.jsx` | Added a "Salin Kontak SJ" quick-fill button next to "Nama Penerima" input that copies the contact person and phone number from the selected Surat Jalan. |
+
 ---
 
 ## SJ Status Flow (Auto-Transitions)
@@ -312,6 +331,8 @@ npm run preview    # Preview production build
 | `SJIndex.jsx` | Print preview printed background menu instead of modal content | Removed `createPortal` and hid background layout using print utilities |
 | `index.css` | Browser-printed "localhost" header/footer | Added `@page { size: A4; margin: 0; }` style rules |
 | `DocumentPrintLayout.jsx` | Signatures too close / print layout scaling too small | Adjusted signature spacing and scaling parameters |
+| `ProofOfDelivery.jsx` | ReferenceError: selectedSJ used before initialization | Declared state hooks above the useMemo hook |
+| `ProofOfDelivery.jsx` | RangeError: Invalid time value on date formatting fallback | Wrapped date strings conversion in fallback checks |
 
 ---
 
