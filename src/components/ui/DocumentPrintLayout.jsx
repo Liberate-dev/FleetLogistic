@@ -158,7 +158,7 @@ export default function DocumentPrintLayout({
         <div className="flex flex-col sm:flex-row justify-around items-center text-center pt-8 mt-8 mb-4 gap-8 print:pt-6 print:mt-6 relative z-10 page-break-inside-avoid">
           {signatures.map((s, i) => (
             <div key={i} className="w-full sm:w-48">
-              <p className="font-bold text-slate-800 mb-20 print:mb-16 text-xs uppercase tracking-wider">{s.label}</p>
+              <p className="font-bold text-slate-800 mb-20 print:mb-24 text-xs uppercase tracking-wider">{s.label}</p>
               {s.stamp && (
                 <div className="inline-block p-1 border-2 border-red-500/30 text-red-500/50 -rotate-12 rounded opacity-50 align-middle transform -translate-y-6">
                   {s.stamp}

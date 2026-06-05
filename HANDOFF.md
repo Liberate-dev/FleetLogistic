@@ -1,7 +1,7 @@
 # Fleet Ops — Handoff Document
 
-> **Date:** June 2, 2026 (Updated)
-> **Status:** Phases 1-11 Complete ✅
+> **Date:** June 5, 2026 (Updated)
+> **Status:** Phases 1-12 Complete ✅
 > **Build Status:** ✅ Compiles successfully (`npm run build` passes)
 
 ---
@@ -140,6 +140,25 @@ Dispatch ID | Related SJ | Destination | Truck | Driver | Created By | Priority 
 - `loadingDate`: Cannot select date before today
 - `receivedAt`: Cannot select datetime before now
 - Visual feedback: red error message below input if invalid
+
+### Phase 12: Mobile UX & Print Preview Refinements (June 5, 2026) ✅
+
+#### Task 1: Mobile Layout and FAB Fixes (POD)
+| File | What Changed |
+|---|---|
+| `src/pages/PODIndex.jsx` | Fixed horizontal scroll on mobile by wrapping table in responsive container and applying `overflow-x-hidden`. Adjusted `+` (FAB) button positioning and padding to remain fully accessible without requiring extensive scrolling. |
+
+#### Task 2: Print Isolation & Modal Refactoring (SJ)
+| File | What Changed |
+|---|---|
+| `src/pages/SJIndex.jsx` | Removed `createPortal` for the print preview modal. Rendered it within the standard `#root` tree to solve visibility issues when printing. |
+| `src/components/Layout.jsx` | Added dynamic `className` support to hide parent/background elements (`print:hidden`) during print, isolating the active document preview. |
+
+#### Task 3: A4 Print Formatting & Custom Footer
+| File | What Changed |
+|---|---|
+| `src/index.css` | Added `@page { size: A4; margin: 0; }` print rule to suppress default browser-injected header/footer (removing "localhost"). |
+| `src/components/ui/DocumentPrintLayout.jsx` | Adjusted padding using responsive classes (`print:px-12 print:py-12`) to compensate for zero page margins. Added a custom printed footer ("Halaman: 1 / 1", "Dicetak oleh: ..."). Adjusted signature gap spacing with `print:mb-24` to prevent clipping and fit the document on a single page. |
 
 ---
 
@@ -284,6 +303,10 @@ npm run preview    # Preview production build
 | `CreateNewSJ.jsx` | `handlePhotoUploadComplete` undefined → foto muatan blank | Handler added |
 | `storageService.js` | `compressImage` declared as `static` → not callable on instance | Removed `static` keyword |
 | `ToastContainer.jsx` | Import path wrong (`../context` in `src/components/ui/`) | Changed to `../../context` |
+| `PODIndex.jsx` | Mobile view horizontal scroll & hard-to-reach FAB button | Wrapped table with overflow-x-hidden, fixed FAB positioning |
+| `SJIndex.jsx` | Print preview printed background menu instead of modal content | Removed `createPortal` and hid background layout using print utilities |
+| `index.css` | Browser-printed "localhost" header/footer | Added `@page { size: A4; margin: 0; }` style rules |
+| `DocumentPrintLayout.jsx` | Signatures too close / print layout scaling too small | Adjusted signature spacing and scaling parameters |
 
 ---
 
