@@ -361,13 +361,28 @@ export function FleetOpsProvider({ children }) {
           });
 
           if (d.pod) {
+            let extraFields = {};
+            if (d.pod.notes && d.pod.notes.trim().startsWith('{')) {
+              try {
+                extraFields = JSON.parse(d.pod.notes);
+              } catch (e) {
+                // Not JSON
+              }
+            }
             normalizedPods.push({
               id: d.pod.id,
+              number: d.pod.id,
               sjNumber: d.suratJalan?.documentNumber,
               receivedBy: d.pod.receivedBy,
-              notes: d.pod.notes,
+              receiverName: d.pod.receivedBy,
+              notes: extraFields.notes || d.pod.notes,
               createdAt: d.pod.receivedAt || d.pod.createdAt,
+              receivedAt: d.pod.receivedAt || d.pod.createdAt,
               photos: d.pod.photos ? JSON.parse(d.pod.photos) : [],
+              status: extraFields.status || (status === 'DELIVERED' || status === 'COMPLETED' ? 'RECEIVED' : 'PENDING'),
+              deliveryCondition: extraFields.deliveryCondition || 'good',
+              discrepancyDetails: extraFields.discrepancyDetails || '',
+              ...extraFields
             });
           }
 

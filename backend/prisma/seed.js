@@ -167,289 +167,256 @@ async function main() {
 
   console.log('✓ Drivers created');
 
-  // 6. Create Surat Jalan 1: DRAFT Status (New Order)
-  const sj1 = await prisma.suratJalan.upsert({
-    where: { documentNumber: 'SJ-20260428-001' },
-    update: {},
-    create: {
-      documentNumber: 'SJ-20260428-001',
-      customerId: customers[0].id,
-      date: new Date(),
+  // Clear existing transactions to enable clean re-seeding
+  console.log('🧹 Clearing old transaction tables...');
+  await prisma.lPJ.deleteMany({});
+  await prisma.pOD.deleteMany({});
+  await prisma.vehicleChecklist.deleteMany({});
+  await prisma.driverChecklist.deleteMany({});
+  await prisma.dispatch.deleteMany({});
+  await prisma.suratJalanItem.deleteMany({});
+  await prisma.suratJalan.deleteMany({});
+  await prisma.notification.deleteMany({});
+  await prisma.auditLog.deleteMany({});
+  console.log('✓ Transaction tables cleared');
+
+  // 6. Generate rich operational records (January - June 2026)
+  const historicalShipments = [
+    // January 2026
+    { date: '2026-01-10T08:00:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Surabaya Depot', origin: 'Warehouse A - Jakarta', uJ: 1200000, dC: 300000, odoStart: 10000, odoEnd: 10780, fuel: 220, exp: [{ cat: 'BBM', amt: 1500000 }, { cat: 'Toll', amt: 450000 }] },
+    { date: '2026-01-18T09:30:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15000, odoEnd: 15150, fuel: 45, exp: [{ cat: 'BBM', amt: 350000 }, { cat: 'Toll', amt: 150000 }] },
+    { date: '2026-01-25T11:00:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Malang', origin: 'Warehouse B - Surabaya', uJ: 500000, dC: 100000, odoStart: 22000, odoEnd: 22095, fuel: 30, exp: [{ cat: 'BBM', amt: 220000 }, { cat: 'Parkir', amt: 15000 }] },
+    // February 2026
+    { date: '2026-02-05T07:15:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Jakarta Timur', origin: 'Warehouse A - Jakarta', uJ: 300000, dC: 50000, odoStart: 10780, odoEnd: 10835, fuel: 15, exp: [{ cat: 'BBM', amt: 120000 }, { cat: 'Parkir', amt: 20000 }] },
+    { date: '2026-02-12T08:45:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15150, odoEnd: 15305, fuel: 46, exp: [{ cat: 'BBM', amt: 350000 }, { cat: 'Toll', amt: 160000 }] },
+    { date: '2026-02-20T10:00:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Surabaya', origin: 'Warehouse B - Surabaya', uJ: 400000, dC: 50000, odoStart: 22095, odoEnd: 22125, fuel: 10, exp: [{ cat: 'BBM', amt: 90000 }] },
+    { date: '2026-02-27T13:20:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Surabaya Depot', origin: 'Warehouse A - Jakarta', uJ: 1200000, dC: 300000, odoStart: 10835, odoEnd: 11625, fuel: 225, exp: [{ cat: 'BBM', amt: 1550000 }, { cat: 'Toll', amt: 460000 }] },
+    // March 2026
+    { date: '2026-03-04T08:00:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15305, odoEnd: 15460, fuel: 44, exp: [{ cat: 'BBM', amt: 340000 }, { cat: 'Toll', amt: 150000 }] },
+    { date: '2026-03-12T09:00:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Surabaya', origin: 'Warehouse B - Surabaya', uJ: 400000, dC: 50000, odoStart: 22125, odoEnd: 22160, fuel: 12, exp: [{ cat: 'BBM', amt: 100000 }] },
+    { date: '2026-03-18T10:15:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Jakarta Timur', origin: 'Warehouse A - Jakarta', uJ: 300000, dC: 50000, odoStart: 11625, odoEnd: 11675, fuel: 14, exp: [{ cat: 'BBM', amt: 110000 }, { cat: 'Parkir', amt: 25000 }] },
+    { date: '2026-03-25T14:30:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15460, odoEnd: 15612, fuel: 45, exp: [{ cat: 'BBM', amt: 350000 }, { cat: 'Toll', amt: 150000 }] },
+    // April 2026
+    { date: '2026-04-03T07:30:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Malang', origin: 'Warehouse B - Surabaya', uJ: 500000, dC: 100000, odoStart: 22160, odoEnd: 22255, fuel: 28, exp: [{ cat: 'BBM', amt: 230000 }, { cat: 'Toll', amt: 40000 }] },
+    { date: '2026-04-10T08:00:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Surabaya Depot', origin: 'Warehouse A - Jakarta', uJ: 1200000, dC: 300000, odoStart: 11675, odoEnd: 12455, fuel: 222, exp: [{ cat: 'BBM', amt: 1520000 }, { cat: 'Toll', amt: 450000 }] },
+    { date: '2026-04-17T09:15:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15612, odoEnd: 15765, fuel: 46, exp: [{ cat: 'BBM', amt: 360000 }, { cat: 'Toll', amt: 150000 }] },
+    { date: '2026-04-24T11:00:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Surabaya', origin: 'Warehouse B - Surabaya', uJ: 400000, dC: 50000, odoStart: 22255, odoEnd: 22285, fuel: 9, exp: [{ cat: 'BBM', amt: 80000 }] },
+    // May 2026
+    { date: '2026-05-02T08:00:00Z', status: 'COMPLETED', customerIdx: 0, dest: 'PT Maju Bersama - Jakarta Timur', origin: 'Warehouse A - Jakarta', uJ: 300000, dC: 50000, odoStart: 12455, odoEnd: 12510, fuel: 16, exp: [{ cat: 'BBM', amt: 130000 }, { cat: 'Parkir', amt: 20000 }] },
+    { date: '2026-05-08T09:00:00Z', status: 'COMPLETED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15765, odoEnd: 15920, fuel: 45, exp: [{ cat: 'BBM', amt: 350000 }, { cat: 'Toll', amt: 150000 }] },
+    { date: '2026-05-15T10:30:00Z', status: 'COMPLETED', customerIdx: 2, dest: 'UD Sumber Rejeki - Malang', origin: 'Warehouse B - Surabaya', uJ: 500000, dC: 100000, odoStart: 22285, odoEnd: 22380, fuel: 29, exp: [{ cat: 'BBM', amt: 230000 }, { cat: 'Toll', amt: 40000 }] },
+    // Deliberate Discrepancies in May for POD Reports
+    { date: '2026-05-22T08:30:00Z', status: 'DELIVERED', customerIdx: 0, dest: 'PT Maju Bersama - Surabaya Depot', origin: 'Warehouse A - Jakarta', uJ: 1200000, dC: 300000, odoStart: 12510, odoEnd: 13295, fuel: 226, exp: [{ cat: 'BBM', amt: 1560000 }, { cat: 'Toll', amt: 460000 }], podCondition: 'damaged', discrepancy: 'Besi beton patah 2 batang karena benturan saat bongkar muat' },
+    { date: '2026-05-27T11:00:00Z', status: 'DELIVERED', customerIdx: 1, dest: 'CV Karya Mandiri - Bandung Site', origin: 'Warehouse A - Jakarta', uJ: 600000, dC: 150000, odoStart: 15920, odoEnd: 16075, fuel: 46, exp: [{ cat: 'BBM', amt: 350000 }, { cat: 'Toll', amt: 150000 }], podCondition: 'partial_damage', discrepancy: 'Semen Holcim sobek 5 zak terkena air hujan' }
+  ];
+
+  let seq = 100;
+  for (const s of historicalShipments) {
+    const sjDate = new Date(s.date);
+    const monthStr = String(sjDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(sjDate.getDate()).padStart(2, '0');
+    const docNumber = `SJ-2026${monthStr}${dayStr}-${String(seq++).slice(-3)}`;
+
+    // Calculate total weight (Tons) based on material quantities
+    const qty1 = Math.floor(Math.random() * 100) + 50;
+    const qty2 = Math.floor(Math.random() * 50) + 20;
+    const weightTon = ((qty1 * 10 + qty2 * 50) / 1000).toFixed(2);
+
+    const activeDriver = drivers[seq % drivers.length];
+    const activeVehicle = vehicles[seq % vehicles.length];
+
+    const sj = await prisma.suratJalan.create({
+      data: {
+        documentNumber: docNumber,
+        customerId: customers[s.customerIdx].id,
+        date: sjDate,
+        status: s.status,
+        destination: s.dest,
+        destinationAddress: 'Kawasan Industri Utama Blok D-' + (seq % 10),
+        originDepot: s.origin,
+        contactPerson: 'Bpk. Penanggung Jawab ' + (seq % 5),
+        contactPhone: '0812-3333-' + (seq % 10000),
+        createdByName: 'Admin Operasional',
+        notes: `Total Weight: ${weightTon} Ton | Auto-seeded historical record`,
+        createdById: adminUser.id,
+        uangJalanNominal: s.uJ,
+        danaCadanganNominal: s.dC,
+        uangJalanRecipient: activeDriver.name,
+        photoReceived: true,
+        items: {
+          create: [
+            { materialId: materials[0].id, quantity: qty1, unitPrice: 75000 },
+            { materialId: materials[1].id, quantity: qty2, unitPrice: 65000 }
+          ]
+        },
+        dispatch: {
+          create: {
+            vehicleId: activeVehicle.id,
+            driverId: activeDriver.id,
+            status: s.status,
+            gateCheckStatus: 'PASSED',
+            gateCheckAt: new Date(sjDate.getTime() + 7200000), // 2 hours later
+            gateCheckById: operatorUser.id,
+            vehicleChecklist: {
+              create: {
+                vehicleId: activeVehicle.id,
+                checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Klakson', 'Aki']),
+                condition: seq % 7 === 0 ? 'WARNING' : 'GOOD',
+                notes: seq % 7 === 0 ? 'Kondisi ban serep tipis' : 'Semua komponen aman',
+                checkedById: operatorUser.id,
+                createdAt: sjDate
+              }
+            },
+            driverChecklist: {
+              create: {
+                driverId: activeDriver.id,
+                hasLicense: true,
+                licenseValid: true,
+                condition: 'FIT',
+                checkedById: operatorUser.id,
+                createdAt: sjDate
+              }
+            },
+            pod: {
+              create: {
+                receivedBy: 'Penerima Barang ' + (seq % 4),
+                receivedAt: new Date(sjDate.getTime() + 86400000), // Delivered next day
+                photos: JSON.stringify(['/sample-pod.jpg']),
+                submittedById: operatorUser.id,
+                // Embed the JSON configuration inside the notes field
+                notes: JSON.stringify({
+                  status: s.podCondition ? 'POD DISCREPANCY' : 'RECEIVED',
+                  deliveryCondition: s.podCondition || 'good',
+                  discrepancyDetails: s.discrepancy || '',
+                  notes: s.discrepancy ? 'Diterima dengan komplain' : 'Diterima dalam kondisi baik'
+                })
+              }
+            },
+            // LPJ record for completed ones
+            ...(s.status === 'COMPLETED' ? {
+              lpj: {
+                create: {
+                  startKm: s.odoStart,
+                  endKm: s.odoEnd,
+                  fuelUsed: s.fuel,
+                  expenses: JSON.stringify(s.exp.map(e => ({
+                    category: e.cat,
+                    amount: e.amt,
+                    description: `${e.cat} Operational Trip`
+                  }))),
+                  notes: 'Selesai dan dikonfirmasi oleh Finance',
+                  submittedById: operatorUser.id,
+                  createdAt: new Date(sjDate.getTime() + 172800000) // completed 2 days later
+                }
+              }
+            } : {})
+          }
+        }
+      }
+    });
+  }
+
+  // 7. Add current Active/DRAFT/ASSIGNED/DISPATCHED orders in June 2026
+  const currentSJs = [
+    {
+      docNum: 'SJ-20260605-001',
       status: 'DRAFT',
-      destination: 'PT Maju Bersama - Pabrik Jakarta Timur',
-      destinationAddress: 'Jl. Sudirman No. 123, Kawasan Industri Jakarta Timur',
-      originDepot: 'Warehouse A - Jakarta Timur',
-      contactPerson: 'Bapak Hendra Wijaya',
-      contactPhone: '021-1234567',
-      createdByName: 'Admin Operasional',
-      notes: 'Total Weight: 15.50 Ton | Total Qty: 150 | Photo Count: 2',
-      createdById: adminUser.id,
-      uangJalanNominal: 500000,
-      uangJalanRecipient: 'Budi Santoso',
-      items: {
-        create: [
-          { materialId: materials[0].id, quantity: 100, unitPrice: 75000 },
-          { materialId: materials[1].id, quantity: 50, unitPrice: 65000 }
-        ]
-      }
-    }
-  });
-
-  // 7. Create Surat Jalan 2: ASSIGNED Status (Dispatched but not departed)
-  const sj2 = await prisma.suratJalan.upsert({
-    where: { documentNumber: 'SJ-20260428-002' },
-    update: {},
-    create: {
-      documentNumber: 'SJ-20260428-002',
-      customerId: customers[1].id,
-      date: new Date(Date.now() - 86400000), // 1 day ago
+      dest: 'PT Maju Bersama - Pabrik Jakarta Timur',
+      origin: 'Warehouse A - Jakarta Timur',
+      custIdx: 0,
+      items: [{ matIdx: 0, qty: 120 }, { matIdx: 2, qty: 50 }]
+    },
+    {
+      docNum: 'SJ-20260605-002',
       status: 'ASSIGNED',
-      destination: 'CV Karya Mandiri - Site Cikarang',
-      destinationAddress: 'Kawasan Industri Cikarang Blok C No. 5',
-      originDepot: 'Warehouse A - Jakarta Timur',
-      contactPerson: 'Ibu Ratna',
-      contactPhone: '0812-9876-5432',
-      createdByName: 'Admin Operasional',
-      notes: 'Total Weight: 8.00 Ton | Total Qty: 80 | Photo Count: 0',
-      createdById: adminUser.id,
-      uangJalanNominal: 750000,
-      uangJalanRecipient: 'Ahmad Hidayat',
-      items: {
-        create: [
-          { materialId: materials[2].id, quantity: 80, unitPrice: 150000 }
-        ]
-      },
+      dest: 'CV Karya Mandiri - Site Cikarang',
+      origin: 'Warehouse A - Jakarta Timur',
+      custIdx: 1,
+      items: [{ matIdx: 1, qty: 90 }],
       dispatch: {
-        create: {
-          vehicleId: vehicles[1].id,
-          driverId: drivers[1].id,
-          status: 'ASSIGNED',
-          gateCheckStatus: 'PENDING',
-          vehicleChecklist: {
-            create: {
-              vehicleId: vehicles[1].id,
-              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli']),
-              condition: 'GOOD',
-              checkedById: operatorUser.id
-            }
-          },
-          driverChecklist: {
-            create: {
-              driverId: drivers[1].id,
-              hasLicense: true,
-              licenseValid: true,
-              condition: 'FIT',
-              checkedById: operatorUser.id
-            }
-          }
-        }
+        driverIdx: 1,
+        vehicleIdx: 1,
+        status: 'ASSIGNED',
+        checkCondition: 'GOOD'
       }
-    }
-  });
-
-  // 8. Create Surat Jalan 3: DISPATCHED Status (On the road)
-  const sj3 = await prisma.suratJalan.upsert({
-    where: { documentNumber: 'SJ-20260428-003' },
-    update: {},
-    create: {
-      documentNumber: 'SJ-20260428-003',
-      customerId: customers[2].id,
-      date: new Date(Date.now() - 172800000), // 2 days ago
+    },
+    {
+      docNum: 'SJ-20260605-003',
       status: 'DISPATCHED',
-      destination: 'UD Sumber Rejeki - Surabaya',
-      destinationAddress: 'Jl. Ahmad Yani No. 789, Surabaya',
-      originDepot: 'Warehouse B - Cikarang',
-      contactPerson: 'Bapak Joko',
-      contactPhone: '0811-2222-3333',
-      createdByName: 'Operator User',
-      notes: 'Urgent Delivery - Total Weight: 12.00 Ton | Total Qty: 120 | Photo Count: 3',
-      createdById: operatorUser.id,
-      dispatchedAt: new Date(Date.now() - 86400000),
-      uangJalanNominal: 1500000,
-      danaCadanganNominal: 500000,
-      uangJalanRecipient: 'Budi Santoso',
-      items: {
-        create: [
-          { materialId: materials[3].id, quantity: 100, unitPrice: 85000 },
-          { materialId: materials[4].id, quantity: 20, unitPrice: 200000 }
-        ]
-      },
+      dest: 'UD Sumber Rejeki - Surabaya',
+      origin: 'Warehouse B - Cikarang',
+      custIdx: 2,
+      items: [{ matIdx: 3, qty: 200 }],
       dispatch: {
-        create: {
-          vehicleId: vehicles[0].id,
-          driverId: drivers[0].id,
-          status: 'DISPATCHED',
-          gateCheckStatus: 'PASSED',
-          gateCheckAt: new Date(Date.now() - 86400000),
-          gateCheckById: operatorUser.id,
-          vehicleChecklist: {
-            create: {
-              vehicleId: vehicles[0].id,
-              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Wiper']),
-              condition: 'GOOD',
-              checkedById: operatorUser.id
-            }
-          },
-          driverChecklist: {
-            create: {
-              driverId: drivers[0].id,
-              hasLicense: true,
-              licenseValid: true,
-              condition: 'FIT',
-              checkedById: operatorUser.id
-            }
-          }
-        }
+        driverIdx: 0,
+        vehicleIdx: 0,
+        status: 'DISPATCHED',
+        checkCondition: 'GOOD'
       }
     }
-  });
+  ];
 
-  // 9. Create Surat Jalan 4: DELIVERED Status (Needs LPJ)
-  const sj4 = await prisma.suratJalan.upsert({
-    where: { documentNumber: 'SJ-20260428-004' },
-    update: {},
-    create: {
-      documentNumber: 'SJ-20260428-004',
-      customerId: customers[0].id,
-      date: new Date(Date.now() - 345600000), // 4 days ago
-      status: 'DELIVERED',
-      destination: 'PT Maju Bersama - Warehouse',
-      destinationAddress: 'Kawasan Industri Pulogadung',
-      originDepot: 'Warehouse A - Jakarta Timur',
-      contactPerson: 'Bapak Hendra Wijaya',
-      contactPhone: '021-1234567',
-      createdByName: 'Admin Operasional',
-      notes: 'Total Weight: 2.00 Ton | Total Qty: 20 | Photo Count: 5',
-      createdById: adminUser.id,
-      dispatchedAt: new Date(Date.now() - 259200000),
-      deliveredAt: new Date(Date.now() - 86400000), // Delivered 1 day ago
-      uangJalanNominal: 300000,
-      uangJalanRecipient: 'Dedi Kurniawan',
-      items: {
-        create: [
-          { materialId: materials[1].id, quantity: 20, unitPrice: 65000 }
-        ]
-      },
-      dispatch: {
-        create: {
-          vehicleId: vehicles[2].id,
-          driverId: drivers[2].id,
-          status: 'DELIVERED',
-          gateCheckStatus: 'PASSED',
-          gateCheckAt: new Date(Date.now() - 259200000),
-          gateCheckById: operatorUser.id,
-          vehicleChecklist: {
+  for (const c of currentSJs) {
+    const sjDate = new Date();
+    const weightTon = ((c.items.reduce((sum, i) => sum + i.qty * 15, 0)) / 1000).toFixed(2);
+
+    await prisma.suratJalan.create({
+      data: {
+        documentNumber: c.docNum,
+        customerId: customers[c.custIdx].id,
+        date: sjDate,
+        status: c.status,
+        destination: c.dest,
+        destinationAddress: 'Jl. Utama No. ' + (seq % 100),
+        originDepot: c.origin,
+        contactPerson: 'Penanggung Jawab Ops',
+        contactPhone: '0812-9999-8888',
+        createdByName: 'Admin Operasional',
+        notes: `Total Weight: ${weightTon} Ton | Active Operational SJ`,
+        createdById: adminUser.id,
+        uangJalanNominal: c.status !== 'DRAFT' ? 800000 : null,
+        uangJalanRecipient: c.status !== 'DRAFT' ? drivers[c.dispatch.driverIdx].name : null,
+        items: {
+          create: c.items.map(it => ({
+            materialId: materials[it.matIdx].id,
+            quantity: it.qty,
+            unitPrice: 70000
+          }))
+        },
+        ...(c.dispatch ? {
+          dispatch: {
             create: {
-              vehicleId: vehicles[2].id,
-              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli']),
-              condition: 'GOOD',
-              checkedById: operatorUser.id
-            }
-          },
-          driverChecklist: {
-            create: {
-              driverId: drivers[2].id,
-              hasLicense: true,
-              licenseValid: true,
-              condition: 'FIT',
-              checkedById: operatorUser.id
-            }
-          },
-          pod: {
-            create: {
-              receivedBy: 'Pak Satpam (Agus)',
-              receivedAt: new Date(Date.now() - 86400000),
-              notes: 'Diterima dalam kondisi baik',
-              submittedById: operatorUser.id,
-              photos: JSON.stringify(['/sample-pod-1.jpg', '/sample-pod-2.jpg'])
+              vehicleId: vehicles[c.dispatch.vehicleIdx].id,
+              driverId: drivers[c.dispatch.driverIdx].id,
+              status: c.dispatch.status,
+              gateCheckStatus: c.dispatch.status === 'DISPATCHED' ? 'PASSED' : 'PENDING',
+              gateCheckAt: c.dispatch.status === 'DISPATCHED' ? new Date() : null,
+              gateCheckById: operatorUser.id,
+              vehicleChecklist: {
+                create: {
+                  vehicleId: vehicles[c.dispatch.vehicleIdx].id,
+                  checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli']),
+                  condition: c.dispatch.checkCondition,
+                  checkedById: operatorUser.id
+                }
+              },
+              driverChecklist: {
+                create: {
+                  driverId: drivers[c.dispatch.driverIdx].id,
+                  hasLicense: true,
+                  licenseValid: true,
+                  condition: 'FIT',
+                  checkedById: operatorUser.id
+                }
+              }
             }
           }
-        }
+        } : {})
       }
-    }
-  });
+    });
+  }
 
-  // 10. Create Surat Jalan 5: COMPLETED Status (Has POD and LPJ)
-  const sj5 = await prisma.suratJalan.upsert({
-    where: { documentNumber: 'SJ-20260428-005' },
-    update: {},
-    create: {
-      documentNumber: 'SJ-20260428-005',
-      customerId: customers[1].id,
-      date: new Date(Date.now() - 604800000), // 7 days ago
-      status: 'COMPLETED',
-      destination: 'CV Karya Mandiri - Pusat',
-      destinationAddress: 'Jl. Merdeka No. 1, Bandung',
-      originDepot: 'Warehouse B - Cikarang',
-      contactPerson: 'Ibu Ratna',
-      contactPhone: '0812-9876-5432',
-      createdByName: 'Operator User',
-      notes: 'Total Weight: 5.00 Ton | Total Qty: 50 | Photo Count: 4',
-      createdById: operatorUser.id,
-      dispatchedAt: new Date(Date.now() - 518400000),
-      deliveredAt: new Date(Date.now() - 432000000),
-      completedAt: new Date(Date.now() - 345600000),
-      uangJalanNominal: 600000,
-      uangJalanRecipient: 'Ahmad Hidayat',
-      items: {
-        create: [
-          { materialId: materials[0].id, quantity: 50, unitPrice: 75000 }
-        ]
-      },
-      dispatch: {
-        create: {
-          vehicleId: vehicles[1].id,
-          driverId: drivers[1].id,
-          status: 'COMPLETED',
-          gateCheckStatus: 'PASSED',
-          gateCheckAt: new Date(Date.now() - 518400000),
-          gateCheckById: adminUser.id,
-          vehicleChecklist: {
-            create: {
-              vehicleId: vehicles[1].id,
-              checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Klakson']),
-              condition: 'GOOD',
-              checkedById: adminUser.id
-            }
-          },
-          driverChecklist: {
-            create: {
-              driverId: drivers[1].id,
-              hasLicense: true,
-              licenseValid: true,
-              condition: 'FIT',
-              checkedById: adminUser.id
-            }
-          },
-          pod: {
-            create: {
-              receivedBy: 'Gudang Utama - Bpk Rudi',
-              receivedAt: new Date(Date.now() - 432000000),
-              notes: 'Barang komplit sesuai DO',
-              submittedById: adminUser.id,
-              photos: JSON.stringify(['/sample-pod-completed.jpg'])
-            }
-          },
-          lpj: {
-            create: {
-              startKm: 45000,
-              endKm: 45210,
-              fuelUsed: 40.5,
-              expenses: JSON.stringify([
-                { category: 'BBM', amount: 350000, description: 'Solar SPBU Tol' },
-                { category: 'Toll', amount: 150000, description: 'Tol Japek & Cipularang' },
-                { category: 'Parkir', amount: 20000, description: 'Parkir Kawasan' }
-              ]),
-              notes: 'Perjalanan lancar, tidak ada kendala',
-              submittedById: operatorUser.id
-            }
-          }
-        }
-      }
-    }
-  });
-
-  console.log('✓ Dispatches, Checklists, PODs, and LPJs generated for SJs');
+  console.log('✓ Programmatic historical and active dispatches created');
 
   // 11. Add Notifications
   await prisma.notification.createMany({
@@ -457,22 +424,22 @@ async function main() {
       {
         userId: adminUser.id,
         type: 'SYSTEM',
-        title: 'System Initialized',
-        message: 'Welcome to FleetOps Logistics Command Center.',
+        title: 'Sistem Terhubung',
+        message: 'Selamat datang di FleetOps Logistics Control Center.',
         read: false
       },
       {
         userId: operatorUser.id,
         type: 'DISPATCH',
-        title: 'New Dispatch Assigned',
-        message: 'You have been assigned to review Gate Checks for SJ-20260428-002.',
+        title: 'Penugasan Driver',
+        message: 'Driver Budi Santoso ditugaskan ke order SJ-20260605-003.',
         read: false
       },
       {
         userId: adminUser.id,
         type: 'POD',
-        title: 'POD Received',
-        message: 'Proof of Delivery for SJ-20260428-004 has been uploaded by the driver.',
+        title: 'POD Baru Diupload',
+        message: 'Proof of Delivery untuk SJ-20260527-119 dilaporkan dengan kerusakan parsial.',
         read: false
       }
     ]
@@ -486,16 +453,9 @@ async function main() {
       {
         userId: adminUser.id,
         entityType: 'SuratJalan',
-        entityId: sj5.id,
-        action: 'CREATE',
-        newValue: 'Created Draft SJ-20260428-005'
-      },
-      {
-        userId: operatorUser.id,
-        entityType: 'LPJ',
-        entityId: sj5.id, // technically dispatchId/lpjId, but for logging demo this is fine
-        action: 'APPROVE',
-        newValue: 'LPJ Approved and SJ marked COMPLETED'
+        entityId: 'SYSTEM',
+        action: 'SEED',
+        newValue: 'Full historical seed data generated successfully'
       }
     ]
   });
@@ -504,12 +464,10 @@ async function main() {
 
   console.log('\n✅ Seeding complete!');
   console.log('\nSample data populated:');
-  console.log('- 1 DRAFT Surat Jalan');
-  console.log('- 1 ASSIGNED Surat Jalan (Ready for Dispatch)');
-  console.log('- 1 DISPATCHED Surat Jalan (In Transit)');
-  console.log('- 1 DELIVERED Surat Jalan (Awaiting LPJ)');
-  console.log('- 1 COMPLETED Surat Jalan (Full cycle: Checklists, POD, LPJ)');
-  console.log('- Notifications & Audit Logs included for Dashboard visualization');
+  console.log('- 18 COMPLETED Surat Jalan (spread over Jan - May 2026)');
+  console.log('- 2 DELIVERED Surat Jalan (with May POD discrepancies for testing)');
+  console.log('- 3 Active orders (DRAFT, ASSIGNED, DISPATCHED) for June 2026');
+  console.log('- Real operational costs (LPJs) and check logs included.');
 }
 
 main()
