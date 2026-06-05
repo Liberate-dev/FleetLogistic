@@ -123,6 +123,12 @@
   
   /* Signature spacing */
   .mb-20 {
-    margin-bottom: 6rem !important;
+    margin-bottom: 3rem !important; /* Reduced to fit on one page */
+  }
+
+  /* Force A4 and remove browser margins to hide default headers/footers (like 'localhost') */
+  @page {
+    size: A4;
+    margin: 0;
   }
 }

@@ -53,6 +53,7 @@ export default function DocumentPrintLayout({
   remarks,
   extra,
   compact = false,
+  printedBy,
 }) {
   const t = docType || 'SJ';
   const resolvedTitle = title || t === 'SJ' ? 'SURAT JALAN' : t;
@@ -60,7 +61,7 @@ export default function DocumentPrintLayout({
 
   return (
     <div
-      className={`w-full max-w-3xl bg-white shadow-xl print:shadow-none print:p-0 relative text-slate-800 font-sans mx-auto ${
+      className={`w-full max-w-3xl bg-white shadow-xl print:shadow-none print:px-12 print:py-12 relative text-slate-800 font-sans mx-auto ${
         compact ? 'p-6 md:p-8' : 'p-8 md:p-12'
       }`}
     >
@@ -71,7 +72,7 @@ export default function DocumentPrintLayout({
       </div>
 
       {/* Doc Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start border-b-2 border-slate-800 pb-6 mb-6 gap-6 relative z-10">
+      <div className="flex flex-col md:flex-row justify-between items-start border-b-2 border-slate-800 pb-6 mb-6 gap-6 print:pb-4 print:mb-6 relative z-10">
         <div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-800 tracking-tight flex items-center gap-2">
             <span className="material-symbols-outlined text-4xl">local_shipping</span>
@@ -120,7 +121,7 @@ export default function DocumentPrintLayout({
 
       {/* Parties (routing) */}
       {parties.length > 0 && (
-        <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8 border-b-2 border-slate-100 pb-8 relative z-10">
+        <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 mb-8 border-b-2 border-slate-100 pb-8 print:gap-6 print:mb-6 print:pb-6 relative z-10">
           {parties.map((p, i) => (
             <div key={i} className="flex-1 space-y-1 text-sm bg-slate-50 p-4 rounded-lg border border-slate-100">
               <h3 className="font-bold text-slate-400 uppercase tracking-widest text-[10px] mb-3 flex items-center gap-1">
@@ -140,11 +141,11 @@ export default function DocumentPrintLayout({
       )}
 
       {/* Body content (tables, sections) */}
-      {body && <div className="mb-8 relative z-10">{body}</div>}
+      {body && <div className="mb-8 print:mb-6 relative z-10">{body}</div>}
 
       {/* Remarks */}
       {remarks && (
-        <div className="text-sm relative z-10 mb-8">
+        <div className="text-sm relative z-10 mb-8 print:mb-6">
           <p className="font-bold text-slate-800 mb-2">Remarks / Catatan:</p>
           <p className="text-slate-600 italic p-4 bg-slate-50 border border-slate-200 rounded leading-relaxed border-l-4 border-l-slate-400">
             {remarks}
@@ -154,10 +155,10 @@ export default function DocumentPrintLayout({
 
       {/* Signatures */}
       {signatures.length > 0 && (
-        <div className="flex flex-col sm:flex-row justify-around items-center text-center pt-8 mt-8 mb-4 gap-8 relative z-10 page-break-inside-avoid">
+        <div className="flex flex-col sm:flex-row justify-around items-center text-center pt-8 mt-8 mb-4 gap-8 print:pt-6 print:mt-6 relative z-10 page-break-inside-avoid">
           {signatures.map((s, i) => (
             <div key={i} className="w-full sm:w-48">
-              <p className="font-bold text-slate-800 mb-20 text-xs uppercase tracking-wider">{s.label}</p>
+              <p className="font-bold text-slate-800 mb-20 print:mb-16 text-xs uppercase tracking-wider">{s.label}</p>
               {s.stamp && (
                 <div className="inline-block p-1 border-2 border-red-500/30 text-red-500/50 -rotate-12 rounded opacity-50 align-middle transform -translate-y-6">
                   {s.stamp}
@@ -178,9 +179,16 @@ export default function DocumentPrintLayout({
       {extra && <div className="relative z-10">{extra}</div>}
 
       {/* Footer */}
-      <div className="mt-12 pt-4 border-t border-slate-200 text-[10px] text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-2 font-mono relative z-10">
-        <p>Doc Ref: {docNumber || '-'} • Fleet Ops Logistics System</p>
-        <p>Printed at: {new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'long' })}</p>
+      <div className="mt-12 pt-4 print:mt-8 print:pt-4 border-t border-slate-200 text-[10px] text-slate-400 flex flex-col sm:flex-row justify-between items-center gap-4 font-mono relative z-10">
+        <div className="flex flex-wrap gap-x-4 gap-y-1">
+          <p className="font-bold text-slate-500">Doc Ref: {docNumber || '-'}</p>
+          <p>Fleet Ops System</p>
+          <p className="font-bold text-slate-500">Halaman: 1 / 1</p>
+        </div>
+        <div className="flex flex-wrap gap-x-4 gap-y-1 sm:text-right">
+          <p>Dicetak oleh: <span className="font-bold text-slate-500">{printedBy || 'Admin Operasional'}</span></p>
+          <p>{new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+        </div>
       </div>
     </div>
   );
