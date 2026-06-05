@@ -330,7 +330,10 @@ export function FleetOpsProvider({ children }) {
         dispatch({ type: 'DRIVERS_SET', payload: driversData.drivers || [] });
         dispatch({ type: 'CUSTOMERS_SET', payload: customersData.customers || [] });
         dispatch({ type: 'MATERIALS_SET', payload: materialsData.materials || [] });
-        dispatch({ type: 'FLEET_SET', payload: vehiclesData.vehicles || [] });
+        dispatch({ type: 'FLEET_SET', payload: (vehiclesData.vehicles || []).map(v => ({
+          ...v,
+          plate: v.plateNumber,
+        })) });
         // Normalize SJ data from DB to UI-compatible shape
         const normalizedSJ = (suratJalanData.suratJalan || []).map(sj => normalizeSJFromDB(sj));
         dispatch({ type: 'SJ_SET', payload: normalizedSJ });
@@ -353,6 +356,7 @@ export function FleetOpsProvider({ children }) {
             id: d.id,
             number: d.id, // Some UI might expect number
             sjNumber: d.suratJalan?.documentNumber,
+            truckId: d.vehicleId,
             truckPlate: d.vehicle?.plateNumber,
             driverName: d.driver?.name,
             status: status,
@@ -400,14 +404,29 @@ export function FleetOpsProvider({ children }) {
             });
           }
 
-          if (d.vehicleChecklist || d.driverChecklist) {
+          if (d.vehicleChecklist) {
+            let clFields = {};
+            if (d.vehicleChecklist.notes && d.vehicleChecklist.notes.trim().startsWith('{')) {
+              try {
+                clFields = JSON.parse(d.vehicleChecklist.notes);
+              } catch (e) {}
+            }
             normalizedChecklists.push({
-              id: d.vehicleChecklist?.id || d.id,
+              id: d.vehicleChecklist.id,
+              number: d.vehicleChecklist.id,
               sjNumber: d.suratJalan?.documentNumber,
-              status: d.gateCheckStatus === 'PASSED' ? 'PRE-DEPARTURE DONE' : 'PENDING',
-              driverName: d.driver?.name,
+              vehiclePlate: clFields.vehiclePlate || d.vehicle?.plateNumber,
               truckPlate: d.vehicle?.plateNumber,
-              createdAt: d.createdAt,
+              driverName: clFields.driverName || d.driver?.name,
+              type: clFields.type || 'pre-departure',
+              status: d.gateCheckStatus === 'PASSED' ? 'PRE-DEPARTURE DONE' : 'PENDING',
+              odometerAwal: clFields.odometerAwal || 0,
+              odometerAkhir: clFields.odometerAkhir || 0,
+              distanceTraveled: clFields.distanceTraveled || 0,
+              itemValues: clFields.itemValues || {},
+              createdAt: d.vehicleChecklist.createdAt || d.createdAt,
+              date: d.vehicleChecklist.createdAt || d.createdAt,
+              ...clFields
             });
           }
         });

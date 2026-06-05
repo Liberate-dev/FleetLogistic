@@ -3,13 +3,13 @@ import Layout from '../components/Layout';
 import { useFleetOps } from '../context';
 
 const REPORT_TYPES = [
-  { id: 'fleet_util', label: 'Fleet Utilization Summary', icon: 'local_shipping', category: 'Operations' },
-  { id: 'cash_advance', label: 'Cash Advance Recap (F-RP-01)', icon: 'payments', category: 'Finance' },
-  { id: 'distance', label: 'Distance Tracking (F-RP-01)', icon: 'speed', category: 'Operations' },
-  { id: 'checklist', label: 'Checklist Findings (F-RP-01)', icon: 'assignment', category: 'Compliance' },
-  { id: 'pod_disc', label: 'POD Discrepancies (F-RP-01)', icon: 'warning', category: 'Compliance' },
-  { id: 'client_perf', label: 'Client Delivery Performance', icon: 'analytics', category: 'Analytics' },
-  { id: 'revenue', label: 'Monthly Revenue & Tonnage', icon: 'account_balance', category: 'Finance' },
+  { id: 'fleet_util', label: 'Ringkasan Utilitas Armada', icon: 'local_shipping', category: 'Operations' },
+  { id: 'cash_advance', label: 'Rekap Uang Jalan (F-RP-01)', icon: 'payments', category: 'Finance' },
+  { id: 'distance', label: 'Pelacakan Jarak Tempuh (F-RP-01)', icon: 'speed', category: 'Operations' },
+  { id: 'checklist', label: 'Temuan Checklist Kendaraan (F-RP-01)', icon: 'assignment', category: 'Compliance' },
+  { id: 'pod_disc', label: 'Ketidaksesuaian POD (F-RP-01)', icon: 'warning', category: 'Compliance' },
+  { id: 'client_perf', label: 'Kinerja Pengiriman Klien', icon: 'analytics', category: 'Analytics' },
+  { id: 'revenue', label: 'Pendapatan & Tonase Bulanan', icon: 'account_balance', category: 'Finance' },
 ];
 
 export default function Reports() {
@@ -184,7 +184,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Cash Advance Recap</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Rekap Uang Jalan</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {cashAdvanceData.length} records</p>
               </div>
               <div className="text-right">
@@ -245,7 +245,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Distance Tracking Report</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Laporan Pelacakan Jarak Tempuh</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {distanceData.length} trips</p>
               </div>
               <div className="text-right">
@@ -306,7 +306,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Checklist Findings Report</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Laporan Temuan Checklist</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {totalFindings} findings</p>
               </div>
               <div className="text-right">
@@ -366,7 +366,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">POD Discrepancies Report</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Laporan Ketidaksesuaian POD</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {podDiscrepancies.length} cases</p>
               </div>
               <div className="text-right">
@@ -443,7 +443,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Client Delivery Performance</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Kinerja Pengiriman Klien</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {totalClients} clients</p>
               </div>
               <div className="text-right">
@@ -520,7 +520,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Monthly Revenue & Tonnage</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Pendapatan & Tonase Bulanan</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')} &bull; {monthlyRevenueData.length} months</p>
               </div>
               <div className="text-right">
@@ -580,7 +580,7 @@ export default function Reports() {
           <>
             <header className="border-b-2 border-slate-800 pb-6 mb-8 flex justify-between items-end">
               <div>
-                <h1 className="text-3xl font-black font-headline tracking-tighter">Fleet Utilization Summary</h1>
+                <h1 className="text-3xl font-black font-headline tracking-tighter">Ringkasan Utilitas Armada</h1>
                 <p className="text-sm font-semibold text-slate-500 mt-1">Generated: {new Date().toLocaleDateString('id-ID')}</p>
               </div>
               <div className="text-right">

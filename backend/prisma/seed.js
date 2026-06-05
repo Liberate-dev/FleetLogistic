@@ -262,7 +262,20 @@ async function main() {
                 vehicleId: activeVehicle.id,
                 checklistItems: JSON.stringify(['Ban', 'Rem', 'Lampu', 'Oli', 'Klakson', 'Aki']),
                 condition: seq % 7 === 0 ? 'WARNING' : 'GOOD',
-                notes: seq % 7 === 0 ? 'Kondisi ban serep tipis' : 'Semua komponen aman',
+                notes: JSON.stringify({
+                  type: 'post-arrival',
+                  vehiclePlate: activeVehicle.plateNumber,
+                  driverName: activeDriver.name,
+                  odometerAwal: s.odoStart,
+                  odometerAkhir: s.odoEnd,
+                  distanceTraveled: s.odoEnd - s.odoStart,
+                  itemValues: {
+                    'Ban & Rem': {
+                      'Kondisi Ban': { status: seq % 7 === 0 ? 'TIDAK LAYAK' : 'LAYAK', notes: seq % 7 === 0 ? 'Ban serep tipis' : 'Aman' },
+                      'Fungsi Rem': { status: seq % 5 === 0 ? 'PERLU PERHATIAN' : 'LAYAK', notes: seq % 5 === 0 ? 'Minyak rem berkurang sedikit' : 'Aman' }
+                    }
+                  }
+                }),
                 checkedById: operatorUser.id,
                 createdAt: sjDate
               }
