@@ -8,6 +8,7 @@ import SignatureCanvas from '../components/ui/SignatureCanvas';
 import { useFleetOps } from '../context';
 import { documentNumberingService, auditLogger } from '../utils';
 import { SJ_STATUS } from '../constants';
+import DocumentPrintLayout from '../components/ui/DocumentPrintLayout';
 
 const POD_STATUS = {
   PENDING: 'POD PENDING',
@@ -20,6 +21,8 @@ export default function ProofOfDelivery() {
   const [searchParams] = useSearchParams();
   const { sjNumber } = useParams();
   const { suratJalan, pods, createPOD, updatePOD, changeSJStatus, setLoading, addNotification } = useFleetOps();
+
+  const existingPod = useMemo(() => pods.find(p => p.sjNumber === selectedSJ), [pods, selectedSJ]);
 
   // POD number
   const [podNumber, setPodNumber] = useState('');
@@ -200,7 +203,7 @@ export default function ProofOfDelivery() {
   return (
     <Layout>
       {/* Header */}
-      <header className="w-full h-14 sm:h-[72px] shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-8 shadow-sm">
+      <header className="w-full h-14 sm:h-[72px] shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-8 shadow-sm print:hidden">
         <div className="flex items-center gap-3 sm:gap-4">
           <button
             onClick={() => navigate(-1)}
@@ -220,6 +223,16 @@ export default function ProofOfDelivery() {
         </div>
 
         <div className="flex items-center gap-3">
+          {existingPod && (
+            <button
+              onClick={() => window.print()}
+              className="px-4 py-2 bg-primary hover:bg-[#3a533a] text-white rounded-xl text-sm font-bold transition-all shadow-sm flex items-center gap-2"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-[18px]">print</span>
+              <span>Cetak POD</span>
+            </button>
+          )}
           <button
             onClick={() => navigate(-1)}
             className="hidden sm:flex px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm items-center gap-2"
@@ -231,7 +244,7 @@ export default function ProofOfDelivery() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto relative z-10 animate-fade-in no-scrollbar bg-slate-100 dark:bg-slate-950 sm:bg-slate-50/50 sm:dark:bg-slate-900/50">
+      <div className="flex-1 overflow-y-auto relative z-10 animate-fade-in no-scrollbar bg-slate-100 dark:bg-slate-950 sm:bg-slate-50/50 sm:dark:bg-slate-900/50 print:hidden">
         <div className="max-w-5xl mx-auto flex flex-col gap-2 sm:gap-8 pb-36 sm:p-4 md:p-8 pt-2 sm:pt-4">
 
           {/* Section 1: Select SJ */}
@@ -720,6 +733,59 @@ export default function ProofOfDelivery() {
           </div>
         </div>
       </Modal>
+
+      {existingPod && (
+        <div className="hidden print:block print:absolute print:inset-0 print:min-h-screen z-[99999] bg-white">
+          <div className="w-full h-auto overflow-visible">
+            <DocumentPrintLayout
+              docType="POD"
+              docNumber={existingPod.number || existingPod.id}
+              date={new Date(existingPod.receivedAt || existingPod.createdAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              status={existingPod.status}
+              metadata={[
+                { label: 'Dibuat Oleh', value: 'Sopir / Driver' },
+                { label: 'Tanggal Diterima', value: new Date(existingPod.receivedAt || existingPod.createdAt).toLocaleDateString('id-ID') },
+                { label: 'Tipe Dokumen', value: 'Bukti Serah Terima (POD)' },
+                { label: 'Kondisi Pengiriman', value: existingPod.deliveryCondition === 'good' ? 'Barang Diterima Baik' : existingPod.deliveryCondition === 'partial_damage' ? 'Sebagian Rusak' : existingPod.deliveryCondition === 'damaged' ? 'Barang Rusak' : 'Barang Hilang' },
+                { label: 'Nomor SJ Terkait', value: existingPod.sjNumber },
+              ]}
+              parties={[
+                {
+                  label: 'Penerima Barang',
+                  name: existingPod.receiverName || '-',
+                  address: `Jabatan: ${existingPod.receiverTitle || '-'} \nTelp: ${existingPod.receiverPhone || '-'}`,
+                  icon: 'person',
+                },
+                {
+                  label: 'Pengirim (Driver)',
+                  name: selectedSJData?.driverName || 'Driver Operasional',
+                  address: `No. Polisi: ${selectedSJData?.truckPlate || '-'}`,
+                  icon: 'local_shipping',
+                },
+              ]}
+              body={(
+                <div className="space-y-4 font-body">
+                  <div className="border border-slate-200 rounded-xl p-4 bg-slate-50/50">
+                    <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider mb-2">Detail Penerimaan & Catatan</h3>
+                    <p className="text-sm text-slate-700 font-medium">{existingPod.notes || 'Diterima dalam kondisi baik dan lengkap.'}</p>
+                  </div>
+                  {existingPod.status === 'POD DISCREPANCY' && (
+                    <div className="border border-red-200 rounded-xl p-4 bg-red-50/30">
+                      <h3 className="font-bold text-red-800 text-xs uppercase tracking-wider mb-2">Detail Temuan Kerusakan / Kehilangan</h3>
+                      <p className="text-sm text-red-700 font-medium">{existingPod.discrepancyDetails || 'Ada ketidaksesuaian jumlah atau kondisi barang.'}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              signatures={[
+                { label: 'Diterima Oleh (Penerima)', name: existingPod.receiverName, image: existingPod.receiverSignature },
+                { label: 'Diserahkan Oleh (Driver)', name: selectedSJData?.driverName || 'Driver', image: existingPod.driverSignature },
+              ]}
+              footerText="Dokumen ini sah secara digital sebagai tanda terima barang logistik Fleet Ops."
+            />
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
