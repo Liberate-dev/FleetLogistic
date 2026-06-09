@@ -318,19 +318,19 @@ export default function ProofOfDelivery() {
                     <div className="space-y-3">
                       <h3 className="font-bold text-slate-800 dark:text-slate-200 text-xs uppercase tracking-wider">Foto Dokumentasi</h3>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {barangPhotos.map((p, idx) => (
+                        {(existingPod?.photos?.barang || barangPhotos).map((p, idx) => (
                           <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 dark:border-slate-700 bg-slate-100">
                             <img src={p} alt={`Barang ${idx + 1}`} className="w-full h-full object-cover" />
                             <span className="absolute bottom-1 right-1 bg-black/60 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Barang</span>
                           </div>
                         ))}
-                        {kerusakanPhotos.map((p, idx) => (
+                        {(existingPod?.photos?.kerusakan || kerusakanPhotos).map((p, idx) => (
                           <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 dark:border-slate-700 bg-slate-100">
                             <img src={p} alt={`Kerusakan ${idx + 1}`} className="w-full h-full object-cover" />
                             <span className="absolute bottom-1 right-1 bg-red-600/80 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Temuan</span>
                           </div>
                         ))}
-                        {barangPhotos.length === 0 && kerusakanPhotos.length === 0 && (
+                        {(existingPod?.photos?.barang || barangPhotos).length === 0 && (existingPod?.photos?.kerusakan || kerusakanPhotos).length === 0 && (
                           <div className="col-span-full py-4 text-center text-slate-400 text-xs italic">Tidak ada foto dokumentasi.</div>
                         )}
                       </div>
@@ -902,6 +902,27 @@ export default function ProofOfDelivery() {
                     <div className="border border-red-200 rounded-xl p-4 bg-red-50/30">
                       <h3 className="font-bold text-red-800 text-xs uppercase tracking-wider mb-2">Detail Temuan Kerusakan / Kehilangan</h3>
                       <p className="text-sm text-red-700 font-medium">{existingPod.discrepancyDetails || 'Ada ketidaksesuaian jumlah atau kondisi barang.'}</p>
+                    </div>
+                  )}
+
+                  {/* Foto Dokumentasi (print) */}
+                  {((existingPod.photos?.barang?.length || 0) + (existingPod.photos?.kerusakan?.length || 0) > 0) && (
+                    <div className="space-y-3">
+                      <h3 className="font-bold text-slate-800 text-xs uppercase tracking-wider">Foto Dokumentasi</h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                        {(existingPod.photos?.barang || []).map((p, idx) => (
+                          <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 bg-slate-100">
+                            <img src={p} alt={`Barang ${idx + 1}`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 right-1 bg-black/60 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Barang</span>
+                          </div>
+                        ))}
+                        {(existingPod.photos?.kerusakan || []).map((p, idx) => (
+                          <div key={idx} className="relative rounded-xl overflow-hidden aspect-[4/3] border border-slate-200 bg-slate-100">
+                            <img src={p} alt={`Kerusakan ${idx + 1}`} className="w-full h-full object-cover" />
+                            <span className="absolute bottom-1 right-1 bg-red-600/80 text-[9px] text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wider">Temuan</span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

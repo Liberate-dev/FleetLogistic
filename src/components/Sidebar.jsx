@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useFleetOps } from '../context';
 
 const navGroups = [
   {
@@ -34,8 +35,22 @@ const navGroups = [
 ];
 
 export default function Sidebar({ isOpen = true }) {
+  const { addNotification } = useFleetOps();
+
+  const handleLogout = () => {
+    addNotification({
+      type: 'success',
+      title: 'Logout Berhasil',
+      message: 'Anda telah keluar dari sistem.',
+    });
+    // Reset prototype state
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
+  };
+
   return (
-    <aside className={`h-screen sticky top-0 left-0 bg-slate-50 border-r border-slate-200 dark:bg-[#121619] dark:border-slate-800 flex flex-col p-4 gap-1 z-0 shrink-0 shadow-sm transition-all duration-300 ${isOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
+    <aside className={`h-full sticky top-0 left-0 bg-slate-50 border-r border-slate-200 dark:bg-[#121619] dark:border-slate-800 flex flex-col p-4 gap-1 z-0 shrink-0 shadow-sm transition-all duration-300 ${isOpen ? 'w-64' : 'w-0 overflow-hidden'}`}>
       <div className="flex items-center gap-3 px-4 py-4 mb-6">
         <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-container rounded-xl flex items-center justify-center text-white shadow-lg shadow-primary/30">
           <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>local_shipping</span>
@@ -103,6 +118,14 @@ export default function Sidebar({ isOpen = true }) {
             <p className="text-[10px] text-slate-500 truncate uppercase mt-0.5 font-semibold">System Admin</p>
           </div>
         </div>
+
+        <button
+          onClick={handleLogout}
+          className="mt-2 w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors active:scale-[0.985]"
+        >
+          <span className="material-symbols-outlined text-base">logout</span>
+          <span>Logout</span>
+        </button>
       </div>
     </aside>
   );

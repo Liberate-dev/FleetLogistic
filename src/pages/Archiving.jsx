@@ -102,15 +102,21 @@ export default function Archiving() {
             </div>
 
             <div className="flex items-center gap-3 w-full md:w-auto">
-              <select
-                value={statusFilter}
-                onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-                className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary"
-              >
-                <option value="ARCHIVED">All Archived</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+              <div className="relative">
+                <select
+                  value={statusFilter}
+                  onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+                  className="appearance-none bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-3 pr-8 py-2.5 text-sm focus:ring-2 focus:ring-primary cursor-pointer"
+                  style={{ appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none' }}
+                >
+                  <option value="ARCHIVED">All Archived</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 w-8 flex items-center justify-center z-10">
+                  <span className="material-symbols-outlined text-slate-400 text-[18px]">expand_more</span>
+                </div>
+              </div>
               <div className="relative flex-1 md:w-64">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
                 <input
@@ -133,7 +139,19 @@ export default function Archiving() {
             ) : pageItems.length === 0 ? (
               <div className="p-12 text-center text-slate-400">
                 <span className="material-symbols-outlined text-5xl">inventory_2</span>
-                <p className="mt-2">No archived documents found.</p>
+                <p className="mt-2">
+                  {search || statusFilter !== 'ARCHIVED' 
+                    ? 'Tidak ada dokumen yang cocok dengan filter.' 
+                    : 'No archived documents found.'}
+                </p>
+                {(search || statusFilter !== 'ARCHIVED') && (
+                  <button 
+                    onClick={() => { setSearch(''); setStatusFilter('ARCHIVED'); setPage(1); }}
+                    className="mt-2 text-sm text-primary font-bold underline"
+                  >
+                    Reset filter
+                  </button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -327,9 +345,9 @@ export default function Archiving() {
                     </table>
                   )}
                   signatures={[
-                    { label: 'Admin Logistik', sub: 'Nama Terang & Tanda Tangan' },
-                    { label: 'Driver / Armada', sub: 'Nama & Nomor Plat Kendaraan' },
                     { label: 'Penerima (Receiver)', sub: 'Nama Terang & Cap Perusahaan' },
+                    { label: 'Driver / Armada', sub: 'Nama & Nomor Plat Kendaraan' },
+                    { label: 'Admin Logistik', sub: 'Nama Terang & Tanda Tangan' },
                   ]}
                 />
                 ) : (

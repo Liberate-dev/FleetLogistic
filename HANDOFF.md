@@ -1,7 +1,7 @@
 # Fleet Ops — Handoff Document
 
-> **Date:** June 5, 2026 (Updated)
-> **Status:** Phases 1-12 Complete ✅
+> **Date:** June 2026 (Updated)
+> **Status:** Phases 1-13 + targeted bugfixes & UI polish Complete ✅
 > **Build Status:** ✅ Compiles successfully (`npm run build` passes)
 
 ---
@@ -333,6 +333,13 @@ npm run preview    # Preview production build
 | `DocumentPrintLayout.jsx` | Signatures too close / print layout scaling too small | Adjusted signature spacing and scaling parameters |
 | `ProofOfDelivery.jsx` | ReferenceError: selectedSJ used before initialization | Declared state hooks above the useMemo hook |
 | `ProofOfDelivery.jsx` | RangeError: Invalid time value on date formatting fallback | Wrapped date strings conversion in fallback checks |
+| `DocumentPrintLayout.jsx` | Digital signatures (TTD canvas PNG dataUrl) never rendered in POD/SJ/Archive detail or print views; `name` field from callers ignored | Added `s.image` support: renders framed `<img>` (object-contain) in the signature slot when provided. Added `s.name` fallback so signer name (penerima/driver) appears under the line. Reduced blank space for digital sigs while keeping handwritten reserve area. |
+| `SJIndex.jsx` + `Archiving.jsx` | In SJ document print/preview, TTD columns reversed (Admin Logistik on left, Penerima on right) | Reordered `signatures` arrays (both the print-only block and the on-screen modal `DocumentPrintLayout`) so **Penerima (Receiver)** is first (leftmost), **Admin Logistik** is last (rightmost). Driver remains in middle. Same reorder applied to Archive SJ view for consistency. |
+| `ProofOfDelivery.jsx` | After "Create new POD" + successful photo uploads (F-POD-02), foto dokumentasi (barang/kerusakan) did not render in detail view. TTD also missing in opened POD detail. | Detail view (`existingPod` branch) now sources photo grids directly from `existingPod.photos?.barang / .kerusakan` (authoritative persisted data) instead of create-mode `useState` arrays. Added the full "Foto Dokumentasi" grid section (with labels) to the hidden print-only POD `DocumentPrintLayout` block (it was completely missing). TTD images now appear thanks to the `DocumentPrintLayout` update above. Also ensures photos show reliably when opening via `/pod/:sjNumber` from PODIndex. |
+| `PODIndex.jsx` | Filter by status "Received" (in the added filter bar) showed no results even when matching POD data existed. | Dropdown labels made user-friendly ("Received" / "Discrepancy"). `matchesStatus` logic made tolerant of status string variations (with/without "POD " prefix, different casing) so filtering works reliably on real data. |
+| `Archiving.jsx` | "All Archived" filter pill had visual "double arrow" bug — native browser chevron + custom icon both visible with bad spacing between text and arrow. | Switched to `appearance-none` + explicit `WebkitAppearance`/`MozAppearance: none` via style prop. Used dedicated right column wrapper (`w-8 flex items-center justify-center z-10`) with custom `expand_more` icon. Increased right padding on select for clean text-to-chevron spacing. Pill now looks polished and single-arrow. |
+| `Layout.jsx` + `Sidebar.jsx` | Sidebar did not consistently reach the bottom of the viewport ("ga mentok sampe bawah"); visual height and bottom alignment varied between pages (e.g. short dashboard vs tall table pages like Archive). | Root layout now explicitly uses `flex h-screen overflow-hidden`. Sidebar wrapper div gets `h-full`. `<aside>` changed from hard-coded `h-screen` to `h-full`. Main content column cleaned to `flex-1 flex flex-col overflow-hidden`. Sidebar (including bottom user card) now always fills the full viewport height consistently on every page. |
+| `Sidebar.jsx` | No logout button anywhere in the UI. | Added explicit red "Logout" button directly below the user profile card in the sidebar (with `logout` Material icon). On click: shows success notification via `addNotification` then does `window.location.reload()` to cleanly reset the in-memory prototype state (appropriate for demo). |
 
 ---
 

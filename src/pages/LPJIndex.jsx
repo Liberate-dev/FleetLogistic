@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -13,6 +13,12 @@ const LPJ_STATUS_CONFIG = {
 export default function LPJIndex() {
   const { lpjRecords, suratJalan } = useFleetOps();
   const navigate = useNavigate();
+
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const lpjList = useMemo(() => {
     return lpjRecords.map(lpj => {
@@ -39,6 +45,35 @@ export default function LPJIndex() {
   );
 
   const formatCurrency = (val) => `Rp ${Number(val || 0).toLocaleString('id-ID')}`;
+
+  // Filtered LPJ list
+  const filteredLpjList = useMemo(() => {
+    return lpjList.filter((lpj) => {
+      const num = (lpj.number || '').toLowerCase();
+      const sj = (lpj.sjNumber || '').toLowerCase();
+      const driver = (lpj.driverName || '').toLowerCase();
+      const dest = (lpj.sjDestination || '').toLowerCase();
+      const matchesSearch = !searchTerm ||
+        num.includes(searchTerm.toLowerCase()) ||
+        sj.includes(searchTerm.toLowerCase()) ||
+        driver.includes(searchTerm.toLowerCase()) ||
+        dest.includes(searchTerm.toLowerCase());
+
+      const matchesStatus = !statusFilter || lpj.status === statusFilter;
+
+      let matchesDate = true;
+      const rawDate = lpj.submittedAt || lpj.createdAt;
+      if (rawDate && (dateFrom || dateTo)) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          const dStr = d.toISOString().slice(0, 10);
+          if (dateFrom && dStr < dateFrom) matchesDate = false;
+          if (dateTo && dStr > dateTo) matchesDate = false;
+        }
+      }
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [lpjList, searchTerm, statusFilter, dateFrom, dateTo]);
 
   return (
     <Layout>
@@ -122,23 +157,74 @@ export default function LPJIndex() {
               </Link>
             </div>
           ) : (
-            <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50 bg-white dark:bg-slate-800">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm border-collapse">
-                  <thead>
-                    <tr className="bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 text-slate-500">
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">LPJ Number</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Related SJ</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Destination</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Driver</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Total Amount</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Receipts</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Status</th>
-                      <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Submitted</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                    {lpjList.map((lpj) => (
+              <div className="space-y-3">
+                {/* Filters */}
+                <div className="glass-panel rounded-2xl p-4 border border-slate-200/50 bg-white dark:bg-slate-800">
+                <div className="flex flex-wrap items-end gap-3">
+                  <div className="flex-1 min-w-[180px]">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Cari</label>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="LPJ / SJ, driver, tujuan..."
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+                    <select
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                      className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm min-w-[130px] focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="">Semua Status</option>
+                      <option value="PENDING">PENDING</option>
+                      <option value="APPROVED">APPROVED</option>
+                      <option value="REJECTED">REJECTED</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Mulai</label>
+                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Akhir</label>
+                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                  </div>
+
+                  <button
+                    onClick={() => { setSearchTerm(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); }}
+                    className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                    type="button"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-2 font-medium">
+                  Menampilkan <span className="font-bold text-on-surface">{filteredLpjList.length}</span> dari {lpjList.length} LPJ
+                </div>
+              </div>
+
+              <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50 bg-white dark:bg-slate-800">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/50 dark:bg-slate-900/30 border-b border-slate-200 dark:border-slate-700 text-slate-500">
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">LPJ Number</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Related SJ</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Destination</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Driver</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Total Amount</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Receipts</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Status</th>
+                        <th className="py-4 px-6 font-bold uppercase text-xs tracking-wider">Submitted</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                      {filteredLpjList.map((lpj) => (
                       <tr key={lpj.id} onClick={() => navigate(`/lpj/${lpj.sjNumber}`)} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
                         <td className="py-4 px-6">
                           <div className="font-bold text-on-surface font-mono">{lpj.number}</div>
@@ -179,6 +265,7 @@ export default function LPJIndex() {
                 </table>
               </div>
             </div>
+              </div>
           )}
         </div>
       </div>

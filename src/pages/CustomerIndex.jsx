@@ -1,14 +1,26 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import TopNavBar from '../components/TopNavBar';
 
 export default function CustomerIndex() {
+  const [searchTerm, setSearchTerm] = useState('');
+
   const clients = [
     { name: 'Global Logistics Corp', tier: 'Enterprise', location: 'Chicago, IL', terms: 'Net 60', status: 'Active' },
     { name: 'Nexus Industrial', tier: 'Standard', location: 'Austin, TX', terms: 'Net 30', status: 'Active' },
     { name: 'Prime Materials', tier: 'Enterprise', location: 'Miami, FL', terms: 'Custom', status: 'Pending Verification' },
   ];
+
+  const filteredClients = useMemo(() => {
+    if (!searchTerm) return clients;
+    const q = searchTerm.toLowerCase();
+    return clients.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.location.toLowerCase().includes(q) ||
+      c.terms.toLowerCase().includes(q)
+    );
+  }, [searchTerm]);
 
   return (
     <Layout>
@@ -27,6 +39,19 @@ export default function CustomerIndex() {
             </Link>
           </div>
 
+          <div className="mb-3 flex gap-2">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari nama organisasi atau lokasi..."
+              className="flex-1 max-w-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-4 text-sm focus:ring-2 focus:ring-primary"
+            />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="px-3 py-1 text-sm border rounded-xl">Clear</button>
+            )}
+          </div>
+
           <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
@@ -39,7 +64,7 @@ export default function CustomerIndex() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {clients.map((item, i) => (
+                {filteredClients.map((item, i) => (
                   <tr key={i} className="hover:bg-primary/5 transition-colors cursor-pointer">
                     <td className="py-4 px-6 font-bold text-slate-800 dark:text-slate-200">{item.name}</td>
                     <td className="py-4 px-6 text-slate-600">{item.tier}</td>

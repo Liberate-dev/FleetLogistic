@@ -117,7 +117,7 @@ REST under `/api/*` — customers, materials, vehicles, drivers, surat-jalan, di
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **FleetLogistic** (1396 symbols, 2199 relationships, 58 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **FleetLogistic** (1424 symbols, 2209 relationships, 52 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > If any GitNexus tool warns the index is stale, run `npx gitnexus analyze` in terminal first.
 

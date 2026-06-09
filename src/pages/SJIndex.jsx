@@ -10,6 +10,12 @@ export default function SJIndex() {
   const [loading, setLoading] = useState(true);
   const [selectedSJ, setSelectedSJ] = useState(null);
 
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
   useEffect(() => {
     fetchSuratJalan();
   }, []);
@@ -55,6 +61,34 @@ export default function SJIndex() {
     if (!d) return '-';
     return new Date(d).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' });
   };
+
+  // Filtered list based on search / status / date range
+  const filteredSuratJalan = React.useMemo(() => {
+    return suratJalan.filter((item) => {
+      const num = (item.documentNumber || item.number || '').toLowerCase();
+      const client = (item.customer?.name || item.clientName || '').toLowerCase();
+      const dest = (item.destination || '').toLowerCase();
+      const matchesSearch = !searchTerm ||
+        num.includes(searchTerm.toLowerCase()) ||
+        client.includes(searchTerm.toLowerCase()) ||
+        dest.includes(searchTerm.toLowerCase());
+
+      const matchesStatus = !statusFilter || item.status === statusFilter;
+
+      let matchesDate = true;
+      const rawDate = item.date || item.loadingDate || item.createdAt;
+      if (rawDate && (dateFrom || dateTo)) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          const dStr = d.toISOString().slice(0, 10);
+          if (dateFrom && dStr < dateFrom) matchesDate = false;
+          if (dateTo && dStr > dateTo) matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [suratJalan, searchTerm, statusFilter, dateFrom, dateTo]);
 
   const getTotalWeight = (sj) => {
     if (sj.totalWeight) return Number(sj.totalWeight).toFixed(2);
@@ -181,9 +215,9 @@ export default function SJIndex() {
               )}
               signatures={[
                 {
-                  label: 'Admin Logistik',
-                  sub: 'Nama Terang & Tanda Tangan',
-                  autoName: selectedSJ?.createdBy?.name || selectedSJ?.createdByName || null
+                  label: 'Penerima (Receiver)',
+                  sub: 'Nama Terang & Cap Perusahaan',
+                  autoName: selectedSJ?.receiverName || selectedSJ?.receivedBy || null
                 },
                 {
                   label: 'Driver / Armada',
@@ -193,9 +227,9 @@ export default function SJIndex() {
                     : null
                 },
                 {
-                  label: 'Penerima (Receiver)',
-                  sub: 'Nama Terang & Cap Perusahaan',
-                  autoName: selectedSJ?.receiverName || selectedSJ?.receivedBy || null
+                  label: 'Admin Logistik',
+                  sub: 'Nama Terang & Tanda Tangan',
+                  autoName: selectedSJ?.createdBy?.name || selectedSJ?.createdByName || null
                 },
               ]}
               remarks={selectedSJ.notes}
@@ -302,9 +336,9 @@ export default function SJIndex() {
                   )}
                   signatures={[
                     {
-                      label: 'Admin Logistik',
-                      sub: 'Nama Terang & Tanda Tangan',
-                      autoName: selectedSJ?.createdBy?.name || selectedSJ?.createdByName || null
+                      label: 'Penerima (Receiver)',
+                      sub: 'Nama Terang & Cap Perusahaan',
+                      autoName: selectedSJ?.receiverName || selectedSJ?.receivedBy || null
                     },
                     {
                       label: 'Driver / Armada',
@@ -314,9 +348,9 @@ export default function SJIndex() {
                         : null
                     },
                     {
-                      label: 'Penerima (Receiver)',
-                      sub: 'Nama Terang & Cap Perusahaan',
-                      autoName: selectedSJ?.receiverName || selectedSJ?.receivedBy || null
+                      label: 'Admin Logistik',
+                      sub: 'Nama Terang & Tanda Tangan',
+                      autoName: selectedSJ?.createdBy?.name || selectedSJ?.createdByName || null
                     },
                   ]}
                   remarks={selectedSJ.notes}
@@ -348,6 +382,70 @@ export default function SJIndex() {
             </Link>
           </div>
 
+          {/* Filters */}
+          <div className="glass-panel rounded-2xl p-4 mb-3 border border-slate-200/50 bg-white dark:bg-slate-800">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Cari</label>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Nomor SJ, klien, tujuan..."
+                  className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm min-w-[130px] focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Semua Status</option>
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="ASSIGNED">ASSIGNED</option>
+                  <option value="DISPATCHED">DISPATCHED</option>
+                  <option value="DELIVERED">DELIVERED</option>
+                  <option value="COMPLETED">COMPLETED</option>
+                  <option value="CANCELLED">CANCELLED</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Mulai</label>
+                <input
+                  type="date"
+                  value={dateFrom}
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Akhir</label>
+                <input
+                  type="date"
+                  value={dateTo}
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
+                />
+              </div>
+
+              <button
+                onClick={() => { setSearchTerm(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); }}
+                className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                type="button"
+              >
+                Reset
+              </button>
+            </div>
+            <div className="text-[11px] text-slate-500 mt-2 font-medium">
+              Menampilkan <span className="font-bold text-on-surface">{filteredSuratJalan.length}</span> dari {suratJalan.length} Surat Jalan
+            </div>
+          </div>
+
           <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50">
             {loading ? (
               <div className="p-12 text-center text-slate-400">
@@ -358,6 +456,12 @@ export default function SJIndex() {
               <div className="p-12 text-center text-slate-400">
                 <span className="material-symbols-outlined text-5xl">description</span>
                 <p className="mt-2">No Surat Jalan yet. Create your first one!</p>
+              </div>
+            ) : filteredSuratJalan.length === 0 ? (
+              <div className="p-12 text-center text-slate-400">
+                <span className="material-symbols-outlined text-5xl">filter_list</span>
+                <p className="mt-2">Tidak ada hasil yang cocok dengan filter.</p>
+                <button onClick={() => { setSearchTerm(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); }} className="mt-2 text-primary text-sm font-bold underline">Reset filter</button>
               </div>
             ) : (
               <table className="w-full text-left text-sm border-collapse">
@@ -373,7 +477,7 @@ export default function SJIndex() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {suratJalan.map((item) => (
+                  {filteredSuratJalan.map((item) => (
                     <tr key={item.id} className="hover:bg-primary/5 transition-colors cursor-pointer" onClick={() => setSelectedSJ(item)}>
                       <td className="py-4 px-6 font-mono font-bold text-slate-800 dark:text-slate-200">{item.documentNumber}</td>
                       <td className="py-4 px-6 text-slate-600">{formatDate(item.date)}</td>

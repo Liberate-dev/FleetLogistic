@@ -7,9 +7,9 @@ export default function Layout({ children, className = '' }) {
   const { sidebarOpen, setSidebarOpen } = useLayout();
 
   return (
-    <div className={`flex bg-background text-on-surface font-body ${className}`}>
+    <div className={`flex h-screen bg-background text-on-surface font-body overflow-hidden ${className}`}>
       {/* Desktop Sidebar - togglable */}
-      <div className={`hidden md:block shrink-0 transition-all duration-300 overflow-hidden ${sidebarOpen ? 'w-64' : 'w-0'}`}>
+      <div className={`hidden md:block shrink-0 transition-all duration-300 overflow-hidden h-full ${sidebarOpen ? 'w-64' : 'w-0'}`}>
         <Sidebar />
       </div>
 
@@ -17,15 +17,15 @@ export default function Layout({ children, className = '' }) {
       <MobileNav />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen bg-surface">
+      <div className="flex-1 flex flex-col overflow-hidden bg-surface">
         {/* Desktop Header with Burger Button */}
         <DesktopHeader sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Mobile Header */}
         <MobileHeader />
 
-        {/* Page Content - takes remaining space */}
-        <main className="flex-1 flex flex-col">
+        {/* Page Content - takes remaining space, pages control their own scroll container */}
+        <main className="flex-1 flex flex-col overflow-hidden">
           {children}
         </main>
       </div>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -15,6 +15,11 @@ const VEHICLE_CONFIG = {
 
 export default function FleetIndex() {
   const { fleet, checklists, dispatches } = useFleetOps();
+
+  // Filters for fleet list
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showExpiringOnly, setShowExpiringOnly] = useState(false);
 
   // Sample fleet data if context is empty
   const fleetData = fleet.length > 0 ? fleet : [
@@ -60,6 +65,31 @@ export default function FleetIndex() {
   const expiryAlerts = useMemo(() => {
     return expiryTracker.checkExpiries();
   }, []);
+
+  // Filtered fleet list
+  const filteredFleet = useMemo(() => {
+    let result = fleetData;
+
+    if (searchTerm) {
+      const q = searchTerm.toLowerCase();
+      result = result.filter(v =>
+        (v.plate || '').toLowerCase().includes(q) ||
+        (v.model || '').toLowerCase().includes(q) ||
+        (v.type || '').toLowerCase().includes(q)
+      );
+    }
+
+    if (statusFilter) {
+      result = result.filter(v => v.status === statusFilter);
+    }
+
+    if (showExpiringOnly && expiryAlerts.length > 0) {
+      const expiringPlates = new Set(expiryAlerts.map(a => a.vehiclePlate || a.plate));
+      result = result.filter(v => expiringPlates.has(v.plate));
+    }
+
+    return result;
+  }, [fleetData, searchTerm, statusFilter, showExpiringOnly, expiryAlerts]);
 
   return (
     <Layout>
@@ -174,6 +204,32 @@ export default function FleetIndex() {
             </div>
           )}
 
+          {/* Filters for Fleet */}
+          <div className="glass-panel rounded-2xl p-4 mb-3 border border-slate-200/50 bg-white dark:bg-slate-800">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Cari</label>
+                <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Plat, model, tipe..." className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm min-w-[120px] focus:ring-2 focus:ring-primary">
+                  <option value="">Semua Status</option>
+                  <option value={VEHICLE_STATUS.ACTIVE}>Ready / Active</option>
+                  <option value={VEHICLE_STATUS.IN_USE}>In Use</option>
+                  <option value={VEHICLE_STATUS.MAINTENANCE}>Maintenance</option>
+                  <option value={VEHICLE_STATUS.INACTIVE}>Inactive</option>
+                </select>
+              </div>
+              <label className="flex items-center gap-2 text-sm pb-2 cursor-pointer">
+                <input type="checkbox" checked={showExpiringOnly} onChange={(e) => setShowExpiringOnly(e.target.checked)} className="accent-primary" />
+                <span className="text-[11px] font-bold text-amber-600">Hanya yang mendekati expired</span>
+              </label>
+              <button onClick={() => { setSearchTerm(''); setStatusFilter(''); setShowExpiringOnly(false); }} className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700" type="button">Reset</button>
+            </div>
+            <div className="text-[11px] text-slate-500 mt-2 font-medium">Menampilkan <span className="font-bold text-on-surface">{filteredFleet.length}</span> dari {fleetData.length} kendaraan</div>
+          </div>
+
           {/* Fleet Table */}
           <div className="glass-panel rounded-2xl overflow-hidden shadow-lg border border-slate-200/50 bg-white dark:bg-slate-800">
             <div className="overflow-x-auto">
@@ -190,7 +246,7 @@ export default function FleetIndex() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                  {fleetData.map((item, i) => (
+                  {filteredFleet.map((item, i) => (
                     <tr key={item.id} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
                       <td className="py-4 px-6 font-bold text-on-surface font-mono">{item.id}</td>
                       <td className="py-4 px-6 font-bold text-on-surface">{item.plate}</td>

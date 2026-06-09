@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import StatusBadge from '../components/ui/StatusBadge';
@@ -13,6 +13,12 @@ const POD_STATUS_CONFIG = {
 export default function PODIndex() {
   const { pods, suratJalan } = useFleetOps();
   const navigate = useNavigate();
+
+  // Filters for main POD records list
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   const podList = useMemo(() => {
     return pods.map(p => {
@@ -38,6 +44,38 @@ export default function PODIndex() {
     discrepancy: podList.filter(p => p.status === 'POD DISCREPANCY').length,
     pending: pendingPODs.length,
   }), [podList, pendingPODs]);
+
+  // Filtered main list
+  const filteredPodList = useMemo(() => {
+    return podList.filter((pod) => {
+      const sj = pod.sjNumber || '';
+      const recv = (pod.receiverName || '').toLowerCase();
+      const dest = (pod.sjDestination || '').toLowerCase();
+      const matchesSearch = !searchTerm ||
+        pod.number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sj.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recv.includes(searchTerm.toLowerCase()) ||
+        dest.includes(searchTerm.toLowerCase());
+
+      const matchesStatus = !statusFilter || 
+        pod.status === statusFilter || 
+        pod.status?.toUpperCase() === statusFilter.toUpperCase() ||
+        pod.status === statusFilter.replace('POD ', '');
+
+      let matchesDate = true;
+      const rawDate = pod.receivedAt || pod.createdAt;
+      if (rawDate && (dateFrom || dateTo)) {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) {
+          const dStr = d.toISOString().slice(0, 10);
+          if (dateFrom && dStr < dateFrom) matchesDate = false;
+          if (dateTo && dStr > dateTo) matchesDate = false;
+        }
+      }
+
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [podList, searchTerm, statusFilter, dateFrom, dateTo]);
 
   return (
     <Layout>
@@ -143,6 +181,55 @@ export default function PODIndex() {
               </div>
             ) : (
               <>
+                {/* Filters for POD Records */}
+                <div className="glass-panel rounded-2xl p-4 mb-3 border border-slate-200/50 bg-white dark:bg-slate-800">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1 min-w-[180px]">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Cari</label>
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="POD / SJ number, penerima, tujuan..."
+                        className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Status</label>
+                      <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm min-w-[140px] focus:ring-2 focus:ring-primary"
+                      >
+                        <option value="">Semua Status</option>
+                        <option value="POD RECEIVED">Received</option>
+                        <option value="POD DISCREPANCY">Discrepancy</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Mulai</label>
+                      <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Akhir</label>
+                      <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                    </div>
+
+                    <button
+                      onClick={() => { setSearchTerm(''); setStatusFilter(''); setDateFrom(''); setDateTo(''); }}
+                      className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700"
+                      type="button"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-slate-500 mt-2 font-medium">
+                    Menampilkan <span className="font-bold text-on-surface">{filteredPodList.length}</span> dari {podList.length} POD
+                  </div>
+                </div>
+
                 {/* Desktop Table View */}
                 <div className="hidden md:block glass-panel rounded-2xl overflow-hidden shadow-sm border border-slate-200/50 bg-white dark:bg-slate-800 max-w-full">
                   <div className="overflow-x-auto">
@@ -159,7 +246,7 @@ export default function PODIndex() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
-                        {podList.map((pod) => (
+                        {filteredPodList.map((pod) => (
                           <tr key={pod.id} onClick={() => navigate(`/pod/${pod.sjNumber}`)} className="hover:bg-primary/5 dark:hover:bg-primary/5 transition-colors cursor-pointer">
                             <td className="py-4 px-6">
                               <div className="font-bold text-on-surface font-mono">{pod.number}</div>
@@ -205,10 +292,10 @@ export default function PODIndex() {
                 {/* Mobile List View */}
                 <div className="md:hidden flex flex-col bg-white dark:bg-slate-900 shadow-sm sm:shadow-none sm:bg-transparent">
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 sticky top-0 z-10 flex items-center justify-between">
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Daftar POD ({podList.length})</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Daftar POD ({filteredPodList.length} / {podList.length})</span>
                     <span className="material-symbols-outlined text-[16px] text-slate-400">filter_list</span>
                   </div>
-                  {podList.map(pod => (
+                  {filteredPodList.map(pod => (
                     <div key={pod.id} onClick={() => navigate(`/pod/${pod.sjNumber}`)} className="p-4 border-b border-slate-100 dark:border-slate-800 active:bg-slate-50 dark:active:bg-slate-800/50 transition-colors cursor-pointer relative overflow-hidden">
                       {/* Status accent line */}
                       <div className={`absolute left-0 top-0 bottom-0 w-1 ${
