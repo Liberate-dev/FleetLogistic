@@ -6,6 +6,7 @@ const navGroups = [
   {
     group: "Operations",
     items: [
+      { icon: 'menu_book', label: 'Dokumentasi Teknis', path: '/technical-docs' },
       { icon: 'dashboard', label: 'Dashboard', path: '/' },
       { icon: 'receipt_long', label: 'Surat Jalan (SJ)', path: '/sj' },
       { icon: 'route', label: 'Dispatch Planning', path: '/dispatch' },

@@ -671,6 +671,48 @@ router.post('/:id/cancel', async (req, res, next) => {
   }
 });
 
+// Restore (uncancel) surat jalan back to DRAFT for recovery
+router.post('/:id/restore', async (req, res, next) => {
+  try {
+    const { userId } = req.body;
+
+    const existing = await req.prisma.suratJalan.findUnique({
+      where: { id: req.params.id }
+    });
+
+    if (!existing) {
+      return res.status(404).json({ error: 'Surat Jalan not found' });
+    }
+
+    if (existing.status !== SJStatus.CANCELLED) {
+      return res.status(400).json({ error: 'Only CANCELLED SJ can be restored' });
+    }
+
+    const suratJalan = await req.prisma.suratJalan.update({
+      where: { id: req.params.id },
+      data: {
+        status: SJStatus.DRAFT
+      },
+      include: {
+        customer: true,
+        items: { include: { material: true } }
+      }
+    });
+
+    await logStatusChange(req.prisma, {
+      userId,
+      entityType: 'SuratJalan',
+      entityId: req.params.id,
+      oldStatus: existing.status,
+      newStatus: SJStatus.DRAFT
+    });
+
+    res.json(suratJalan);
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Delete surat jalan (only DRAFT)
 router.delete('/:id', async (req, res, next) => {
   try {

@@ -134,16 +134,7 @@ export default function NewDispatch() {
       description: 'Minimal 1 foto tampak dalam bak truk',
     });
 
-    // 3. Cash advance approved
-    checks.push({
-      id: 'cash_advance',
-      label: 'Cash Advance Approved (F-SJ-02)',
-      met: selectedSJData?.cashAdvance?.uangJalan?.nominal && selectedSJData?.cashAdvance?.uangJalan?.signed,
-      required: true,
-      description: 'Uang jalan supir harus disetujui dan ditandatangani',
-    });
-
-    // 4. SIM driver valid
+    // 3. SIM driver valid
     const simValid = selectedDriverData
       ? expiryTracker.isEntityValid(selectedDriverData.id, 'driver')
       : null;
@@ -156,7 +147,7 @@ export default function NewDispatch() {
       description: 'SIM harus masih berlaku dan sesuai kelas kendaraan',
     });
 
-    // 5. Truck not in maintenance
+    // 4. Truck not in maintenance
     const truckNotMaintenance = selectedTruckData
       ? selectedTruckData.status !== VEHICLE_STATUS.MAINTENANCE
       : null;
@@ -169,7 +160,7 @@ export default function NewDispatch() {
       description: 'Truck tidak boleh dalam status maintenance',
     });
 
-    // 6. Truck documents valid (STNK, KIR)
+    // 5. Truck documents valid (STNK, KIR)
     const truckDocsValid = selectedTruckData
       ? expiryTracker.isEntityValid(selectedTruckData.id, 'truck')
       : null;

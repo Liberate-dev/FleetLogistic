@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import TopNavBar from '../components/TopNavBar';
 import { documentNumberingService } from '../utils';
+import { useFleetOps } from '../context/FleetOpsContext';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('general');
   const [docFormat, setDocFormat] = useState('{docType}/{branch}/{year}/{month}/{sequence}');
   const [preview, setPreview] = useState('');
+
+  const { resetAllData } = useFleetOps();
   
   useEffect(() => {
     setDocFormat(documentNumberingService.getFormat());
@@ -55,6 +58,9 @@ export default function Settings() {
                  </button>
                  <button className="text-left px-4 py-3 rounded-xl text-slate-500 hover:bg-slate-50 font-bold text-sm flex items-center gap-3 transition-colors">
                    <span className="material-symbols-outlined text-[20px]">security</span> Security Policies
+                 </button>
+                 <button onClick={() => setActiveTab('data')} className={`text-left px-4 py-3 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors ${activeTab === 'data' ? 'bg-primary/10 text-primary' : 'text-slate-500 hover:bg-slate-50'}`}>
+                   <span className="material-symbols-outlined text-[20px]">storage</span> Local Data (Prototype)
                  </button>
                </nav>
              </div>
@@ -139,6 +145,46 @@ export default function Settings() {
 
                       <div className="flex justify-end pt-4 border-t border-slate-100 dark:border-slate-800">
                          <button onClick={handleSaveFormat} className="px-8 py-3 bg-gradient-to-r from-primary to-primary-container text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all">Save Format</button>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {activeTab === 'data' && (
+                  <section>
+                    <h3 className="font-headline font-bold text-lg mb-4">Local Data Storage</h3>
+                    <div className="glass-panel p-6 rounded-2xl space-y-4">
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl text-sm">
+                        <p className="font-bold text-amber-800 dark:text-amber-300 mb-1">⚠️ Prototype Mode (No Backend)</p>
+                        <p className="text-amber-700 dark:text-amber-400">
+                          Karena deploy statis di cPanel (tanpa backend), data utama disimpan di <strong>browser</strong> kamu.
+                        </p>
+                        <ul className="mt-2 list-disc pl-5 text-xs space-y-1">
+                          <li><strong>Data dokumen</strong> (SJ, Dispatch, Fleet, dll) → localStorage</li>
+                          <li><strong>Foto bukti &amp; attachment</strong> → <strong>IndexedDB</strong> (kapasitas jauh lebih besar, ratusan MB+)</li>
+                          <li>Data hanya ada di browser <strong>perangkat ini</strong> saja.</li>
+                          <li>Reset browser / ganti device / clear site data = data hilang.</li>
+                        </ul>
+                        <p className="mt-2 text-[10px] text-amber-600">Cocok banget buat testing &amp; demo di satu laptop.</p>
+                      </div>
+
+                      <div>
+                        <p className="text-sm mb-2">Aksi Pemeliharaan Data:</p>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Yakin reset SEMUA data SJ, Dispatch, Fleet, Customer, dll? Tindakan ini tidak bisa di-undo.')) {
+                              resetAllData();
+                            }
+                          }}
+                          className="px-6 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-bold shadow active:scale-95 transition-all"
+                        >
+                          🗑️ Reset Semua Data Lokal
+                        </button>
+                        <p className="text-xs text-slate-500 mt-2">Ini akan menghapus data yang tersimpan di localStorage dan me-reload state.</p>
+                      </div>
+
+                      <div className="text-xs text-slate-500 pt-2 border-t">
+                        Untuk backup manual: buka DevTools → Application → Local Storage → cari kunci <code>fleet_ops_main_data</code>, <code>fleet_ops_audit_log</code>, dll. Export JSON jika butuh.
                       </div>
                     </div>
                   </section>

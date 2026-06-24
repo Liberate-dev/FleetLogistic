@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import { auditLogger } from '../utils/auditLogger';
+import { storageService } from '../utils/storageService';
 
 const FleetOpsContext = createContext();
 
@@ -254,6 +255,9 @@ function fleetOpsReducer(state, action) {
         notifications: state.notifications.filter(n => n.id !== action.payload),
       };
 
+    case 'RESET_ALL':
+      return initialState;
+
     default:
       return state;
   }
@@ -304,9 +308,46 @@ function normalizeSJFromDB(sj, originalData = {}) {
   };
 }
 
+// Persistence helpers (for static / cPanel deploys without backend)
+const PERSIST_KEY = 'fleet_ops_main_data';
+
+function getPersistedState() {
+  try {
+    const saved = localStorage.getItem(PERSIST_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Merge with initial to ensure all keys exist
+      return { ...initialState, ...parsed };
+    }
+  } catch (e) {
+    console.warn('Failed to read persisted data:', e);
+  }
+  return initialState;
+}
+
+function savePersistedState(partialState) {
+  try {
+    // Only persist the core business data (avoid UI noise)
+    const toSave = {
+      suratJalan: partialState.suratJalan || [],
+      checklists: partialState.checklists || [],
+      pods: partialState.pods || [],
+      lpjRecords: partialState.lpjRecords || [],
+      fleet: partialState.fleet || [],
+      drivers: partialState.drivers || [],
+      customers: partialState.customers || [],
+      materials: partialState.materials || [],
+      dispatches: partialState.dispatches || [],
+    };
+    localStorage.setItem(PERSIST_KEY, JSON.stringify(toSave));
+  } catch (e) {
+    console.warn('Failed to save data to localStorage (quota may be full, especially with many photos):', e);
+  }
+}
+
 // Provider Component
 export function FleetOpsProvider({ children }) {
-  const [state, dispatch] = useReducer(fleetOpsReducer, initialState);
+  const [state, dispatch] = useReducer(fleetOpsReducer, getPersistedState());
 
   // Fetch initial data on mount
   useEffect(() => {
@@ -443,6 +484,12 @@ export function FleetOpsProvider({ children }) {
     fetchData();
   }, []);
 
+  // Persist core data to localStorage whenever it changes
+  // (enables data to survive refresh on static deploys like cPanel)
+  useEffect(() => {
+    savePersistedState(state);
+  }, [state.suratJalan, state.checklists, state.pods, state.lpjRecords, state.fleet, state.drivers, state.customers, state.materials, state.dispatches]);
+
   // Memoized actions
   const actions = useCallback(() => ({
     dispatch,
@@ -466,8 +513,13 @@ export function FleetOpsProvider({ children }) {
           throw new Error(result.error || 'Failed to create SJ');
         }
       } catch (error) {
-        console.error('createSJ error:', error);
-        throw error;
+        // Backend not available (static cPanel deploy, no Node backend) → local fallback
+        console.warn('createSJ: backend unavailable, saving locally (localStorage). Data will persist on refresh.');
+        // The form already generates a proper number via documentNumberingService.
+        // SJ_CREATE reducer will add timestamps + audit log.
+        dispatch({ type: 'SJ_CREATE', payload: data });
+        // Do NOT throw — allow caller (CreateNewSJ form) to continue with notifications, WA attempt (will fail gracefully), and redirect.
+        return { success: true, local: true, data };
       }
     },
     updateSJ: (data) => dispatch({ type: 'SJ_UPDATE', payload: data }),
@@ -522,6 +574,27 @@ export function FleetOpsProvider({ children }) {
       dispatch({ type: 'ADD_NOTIFICATION', payload: notification }),
     removeNotification: (id) =>
       dispatch({ type: 'REMOVE_NOTIFICATION', payload: id }),
+
+    // Dev / Maintenance (useful for static deploys)
+    resetAllData: () => {
+      try {
+        localStorage.removeItem(PERSIST_KEY);
+      } catch {}
+
+      // Also clear photo/attachment files stored in IndexedDB
+      if (storageService && typeof storageService.clearAll === 'function') {
+        storageService.clearAll().catch(err => console.warn('Failed to clear attachment files:', err));
+      }
+
+      dispatch({ type: 'RESET_ALL' });
+
+      // Small delay so state updates, then ask to reload for clean slate
+      setTimeout(() => {
+        if (window.confirm('Semua data (termasuk foto bukti) sudah di-reset. Reload halaman sekarang untuk tampilan bersih?')) {
+          window.location.reload();
+        }
+      }, 80);
+    },
   }), []);
 
   return (

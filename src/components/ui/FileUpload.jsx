@@ -72,7 +72,7 @@ export default function FileUpload({
           metadata.gps = file.location;
         }
 
-        const record = storageService.storeFile(
+        const record = await storageService.storeFile(
           documentId,
           fileType,
           category,
@@ -93,8 +93,8 @@ export default function FileUpload({
     }
   };
 
-  const handleRemoveFile = (fileId) => {
-    storageService.deleteFile(fileId);
+  const handleRemoveFile = async (fileId) => {
+    await storageService.deleteFile(fileId);
     if (onUploadComplete) {
       onUploadComplete(existingFiles.filter(f => f.id !== fileId));
     }

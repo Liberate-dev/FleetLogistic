@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import TopNavBar from '../components/TopNavBar';
 import Modal from '../components/ui/Modal';
 import DocumentPrintLayout from '../components/ui/DocumentPrintLayout';
+import { useFleetOps } from '../context/FleetOpsContext';
 
 const PAGE_SIZE = 10;
 
@@ -38,30 +39,38 @@ const getTotalWeight = (sj) => {
 };
 
 export default function Archiving() {
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ARCHIVED');
   const [page, setPage] = useState(1);
   const [selectedRecord, setSelectedRecord] = useState(null);
 
-  const fetchArchive = async () => {
-    setLoading(true);
+  // Use persisted data from context (works on static cPanel deploys)
+  const { suratJalan: contextSJ = [] } = useFleetOps();
+
+  const [records, setRecords] = useState(contextSJ);
+  const [loading, setLoading] = useState(false);
+
+  // Keep in sync with persisted context data
+  useEffect(() => {
+    setRecords(contextSJ);
+  }, [contextSJ]);
+
+  // Optional soft attempt to fetch from backend (ignored gracefully if no backend)
+  const tryLoadFromBackend = async () => {
     try {
       const res = await fetch('/api/surat-jalan?limit=500');
+      if (!res.ok) throw new Error('no backend');
       const data = await res.json();
       const all = data.suratJalan || data || [];
-      setRecords(all);
+      // For static/offline we keep using context data. This is just a no-op info log.
+      if (all.length > 0) console.info('Backend archive data available but using local persisted data for offline mode.');
     } catch (err) {
-      console.error('Archive fetch failed:', err);
-      setRecords([]);
-    } finally {
-      setLoading(false);
+      // Normal on static hosting. Data comes from localStorage via context.
     }
   };
 
   useEffect(() => {
-    fetchArchive();
+    tryLoadFromBackend();
   }, []);
 
   const archived = useMemo(() => {

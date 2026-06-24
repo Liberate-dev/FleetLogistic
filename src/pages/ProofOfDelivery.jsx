@@ -91,9 +91,13 @@ export default function ProofOfDelivery() {
   }, [sjNumber, pods]);
 
   // Derive POD number from selected Surat Jalan
+  // Also auto-set receivedAt for new PODs (non-editable, detected at create time)
   useEffect(() => {
     if (existingPod) {
       setPodNumber(existingPod.number || existingPod.id);
+      if (existingPod.receivedAt) {
+        setReceivedAt(new Date(existingPod.receivedAt).toISOString().slice(0, 16));
+      }
       return;
     }
     if (selectedSJ) {
@@ -101,6 +105,8 @@ export default function ProofOfDelivery() {
         ? selectedSJ.replace(/^SJ/i, 'POD')
         : `POD/${selectedSJ}`;
       setPodNumber(derived);
+      // Auto-detect receive time at the moment user starts creating POD for this SJ
+      setReceivedAt(new Date().toISOString().slice(0, 16));
     } else {
       setPodNumber('');
     }
@@ -457,14 +463,18 @@ export default function ProofOfDelivery() {
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Tanggal & Waktu Terima *</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                        Tanggal &amp; Waktu Terima
+                        <span className="ml-1 text-[10px] font-normal text-primary">(otomatis saat buat POD)</span>
+                      </label>
                       <input
                         type="datetime-local"
                         value={receivedAt}
-                        min={new Date().toISOString().slice(0, 16)}
-                        onChange={(e) => setReceivedAt(e.target.value)}
-                        className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm focus:ring-2 focus:ring-primary focus:outline-none"
+                        readOnly
+                        disabled
+                        className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/50 rounded-xl p-3.5 text-[16px] sm:text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed"
                       />
+                      <p className="text-[10px] text-slate-400">Waktu dicatat secara otomatis ketika POD dibuat dan tidak dapat diubah.</p>
                     </div>
                   </div>
 

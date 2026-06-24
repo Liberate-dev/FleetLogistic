@@ -38,7 +38,3 @@ backend/dist
 backend/*.db
 
 .vercel
-
-# AI / Session tooling (unimportant)
-mcps/
-terminals/

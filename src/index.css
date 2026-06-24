@@ -131,4 +131,33 @@
     size: A4;
     margin: 0;
   }
+
+  /* Reports page: hide non-report UI and make report fill page professionally */
+  .print\:hidden,
+  nav,
+  header,
+  .glass-panel.print\:hidden + * {
+    display: none !important;
+  }
+
+  #report-content {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 12mm !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    min-height: auto !important;
+    background: white !important;
+    color: #212529 !important;
+  }
+
+  #report-content header {
+    border-color: #212529 !important;
+  }
+
+  /* Keep summary cards and table readable */
+  #report-content .bg-slate-50 {
+    background-color: #f8f9fa !important;
+  }
 }

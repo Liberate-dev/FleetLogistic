@@ -28,7 +28,12 @@ import Monitoring from './pages/Monitoring';
 import Archiving from './pages/Archiving';
 import Reports from './pages/Reports';
 import AuditLog from './pages/AuditLog';
+import jsPDF from 'jspdf';
+import autoTableMod from 'jspdf-autotable';
+import { auditLogger } from './utils';
+const autoTable = autoTableMod.default || autoTableMod;
 import Settings from './pages/Settings';
+import TechnicalDocumentation from './pages/TechnicalDocumentation';
 
 import { Link } from 'react-router-dom';
 
@@ -54,36 +59,103 @@ function Dashboard() {
   ];
 
   const handleExport = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "REPORT: LOGISTICS COMMAND CENTER\n\n";
-    
-    csvContent += "--- METRICS ---\n";
-    stats.forEach(stat => {
-      csvContent += `"${stat.title}","${stat.value}","${stat.trend}"\n`;
+    const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    const generatedBy = (auditLogger && auditLogger.currentUser) || 'Alex Sterling';
+
+    // Header bar
+    doc.setFillColor(70, 99, 71);
+    doc.rect(0, 0, pageWidth, 16, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FLEET OPS LOGISTICS', margin, 7);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Logistics Command Center — Executive Summary', margin, 12);
+    doc.text(new Date().toLocaleDateString('id-ID'), pageWidth - margin, 7, { align: 'right' });
+    doc.text(`${new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} by ${generatedBy}`, pageWidth - margin, 12, { align: 'right' });
+
+    let y = 24;
+    doc.setTextColor(33, 37, 41);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Laporan Ringkasan Operasional', margin, y);
+    y += 5;
+    doc.setFontSize(8);
+    doc.setTextColor(108, 117, 125);
+    doc.text(`Generated from Dashboard by ${generatedBy} • Real-time Fleet Operations Overview`, margin, y);
+    y += 6;
+
+    doc.setDrawColor(200);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 8;
+
+    // Metrics section as table
+    doc.setFontSize(9);
+    doc.setTextColor(70, 99, 71);
+    doc.text('KEY METRICS', margin, y);
+    y += 4;
+
+    const metricsBody = stats.map(s => [s.title, s.value, s.trend]);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Metric', 'Value', 'Trend']],
+      body: metricsBody,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [70, 99, 71], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248,249,250] }
     });
-    
-    csvContent += "\n--- RECENT ACTIVITY ---\n";
-    csvContent += "ID,Action,Time,Status\n";
-    recentActivity.forEach(act => {
-      csvContent += `"${act.id}","${act.action}","${act.time}","${act.status}"\n`;
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Recent Activity
+    doc.setFontSize(9);
+    doc.setTextColor(70, 99, 71);
+    doc.text('RECENT ACTIVITY', margin, y);
+    y += 4;
+
+    const activityBody = recentActivity.map(a => [a.id, a.action, a.time, a.status]);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['ID', 'Action', 'Time', 'Status']],
+      body: activityBody,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [69, 95, 135], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248,249,250] }
     });
-    
-    csvContent += "\n--- LIVE DEPLOYMENTS ---\n";
-    csvContent += "Dispatch ID,Driver,Truck,Destination,Status,Progress\n";
-    activeRoutes.forEach(route => {
-      csvContent += `"${route.id}","${route.driver}","${route.truck}","${route.destination}","${route.status}","${route.progress}%"\n`;
+    y = doc.lastAutoTable.finalY + 8;
+
+    // Live Deployments
+    doc.setFontSize(9);
+    doc.setTextColor(70, 99, 71);
+    doc.text('LIVE DEPLOYMENTS', margin, y);
+    y += 4;
+
+    const routesBody = activeRoutes.map(r => [r.id, r.driver, r.truck, r.destination, r.status, `${r.progress}%`]);
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Dispatch ID', 'Driver', 'Truck', 'Destination', 'Status', 'Progress']],
+      body: routesBody,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [70, 99, 71], textColor: 255, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248,249,250] }
     });
 
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    // Simple timestamp formatting
+    // Footer
+    const footY = doc.internal.pageSize.getHeight() - 10;
+    doc.setDrawColor(200);
+    doc.line(margin, footY - 3, pageWidth - margin, footY - 3);
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text(`FLEET OPS — Generated by ${generatedBy} • Confidential`, margin, footY);
+
     const d = new Date();
-    const fName = `fleet_ops_report_${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}.csv`;
-    link.setAttribute("download", fName);
-    document.body.appendChild(link);
-    link.click(); 
-    document.body.removeChild(link);
+    const fName = `fleet_ops_command_center_${d.getFullYear()}${(d.getMonth()+1).toString().padStart(2,'0')}${d.getDate().toString().padStart(2,'0')}.pdf`;
+    doc.save(fName);
   };
 
   return (
@@ -98,7 +170,7 @@ function Dashboard() {
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-4 sm:mt-0">
               <button onClick={handleExport} className="w-full sm:w-auto px-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-sm flex items-center justify-center gap-2 active:scale-95">
-                <span className="material-symbols-outlined text-[18px]">download</span> Export Report
+                <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export Report (PDF)
               </button>
               <Link to="/dispatch/new" className="w-full sm:w-auto px-4 py-2.5 bg-primary hover:bg-[#3a533a] text-white rounded-xl text-sm font-bold transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
                 <span className="material-symbols-outlined text-[18px]">add</span> New Dispatch
@@ -272,6 +344,7 @@ function App() {
       <ToastContainer />
       <Routes>
       <Route path="/" element={<Dashboard />} />
+      <Route path="/technical-docs" element={<TechnicalDocumentation />} />
       
       {/* Index (List) Routes */}
       <Route path="/fleet" element={<FleetIndex />} />

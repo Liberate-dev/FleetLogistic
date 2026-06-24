@@ -31,6 +31,18 @@ export default function DispatchIndex() {
   const [priorityFilter, setPriorityFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleDateFrom = (e) => {
+    const val = e.target.value;
+    if (val && val > today) return; // tidak mungkin after hari ini
+    setDateFrom(val);
+  };
+  const handleDateTo = (e) => {
+    const val = e.target.value;
+    if (val && val > today) return; // tidak mungkin after hari ini
+    setDateTo(val);
+  };
 
   const dispatchList = useMemo(() => {
     return dispatches.map(d => {
@@ -193,11 +205,11 @@ export default function DispatchIndex() {
 
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Mulai</label>
-                    <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                    <input type="date" value={dateFrom} onChange={handleDateFrom} max={today} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" title="Tidak bisa setelah hari ini" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Tanggal Akhir</label>
-                    <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" />
+                    <input type="date" value={dateTo} onChange={handleDateTo} max={today} className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl py-2 px-3 text-sm focus:ring-2 focus:ring-primary" title="Tidak bisa setelah hari ini" />
                   </div>
 
                   <button onClick={() => { setSearchTerm(''); setStatusFilter(''); setPriorityFilter(''); setDateFrom(''); setDateTo(''); }} className="px-4 py-2 text-sm font-bold rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700" type="button">Reset</button>

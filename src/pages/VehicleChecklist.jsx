@@ -278,12 +278,12 @@ export default function VehicleChecklist() {
         label="Foto Bukti"
         multiple={false}
         maxFiles={3}
-        onUploadComplete={(results) => {
+        onUploadComplete={async (results) => {
           setOdometerPhotos(prev => ({
             ...prev,
             [`${categoryId}_${itemId}`]: results,
           }));
-          storageService.storeFile(
+          await storageService.storeFile(
             checklistNumber,
             'photo',
             `checklist_${categoryId}_${itemId}`,

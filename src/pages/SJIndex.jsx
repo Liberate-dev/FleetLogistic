@@ -4,38 +4,52 @@ import { createPortal } from 'react-dom';
 import Layout from '../components/Layout';
 import TopNavBar from '../components/TopNavBar';
 import DocumentPrintLayout from '../components/ui/DocumentPrintLayout';
+import { useFleetOps } from '../context/FleetOpsContext';
 
 export default function SJIndex() {
-  const [suratJalan, setSuratJalan] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedSJ, setSelectedSJ] = useState(null);
 
-  // Filters
+  // Prefer data from context (persisted via localStorage on static deploys)
+  const { suratJalan: contextSJ = [], addNotification, changeSJStatus, deleteSJ: contextDeleteSJ } = useFleetOps();
+
+  // Local UI state for filters + loading indicator (for the rare manual refresh attempt)
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
 
-  useEffect(() => {
-    fetchSuratJalan();
-  }, []);
+  // Use context data as the source of truth (works offline / after cPanel static deploy)
+  const [suratJalan, setSuratJalan] = useState(contextSJ);
 
-  const fetchSuratJalan = async () => {
+  // Keep local list in sync with context (new SJ, status changes etc. will appear immediately)
+  useEffect(() => {
+    setSuratJalan(contextSJ);
+  }, [contextSJ]);
+
+  // Optional: try to pull latest from backend (if you later run a real backend somewhere)
+  // On failure we silently keep using the persisted context data.
+  const tryRefreshFromBackend = async () => {
+    setLoading(true);
     try {
       const res = await fetch('/api/surat-jalan');
+      if (!res.ok) throw new Error('Backend not available');
       const data = await res.json();
-      setSuratJalan(data.suratJalan || []);
+      // If backend returns data, we could dispatch to context, but for now we just log
+      // (context is authoritative for this static version)
+      console.info('Backend SJ list fetched (ignored in static mode - using local persisted data)');
     } catch (err) {
-      console.error('Failed to fetch SJ:', err);
+      // Expected on cPanel static deploy. No problem — we have localStorage data.
+      console.info('Using local persisted SJ data (no backend).');
     } finally {
       setLoading(false);
     }
   };
 
-  // Auto-refresh every 10 seconds to pick up webhook updates
+  // Initial soft check (does not block UI)
   useEffect(() => {
-    const interval = setInterval(fetchSuratJalan, 10000);
-    return () => clearInterval(interval);
+    // Fire and forget
+    tryRefreshFromBackend();
   }, []);
 
   const getStatusBadge = (status) => {
@@ -101,42 +115,97 @@ export default function SJIndex() {
 
   const handleCancelSJ = async (id) => {
     if (!window.confirm('Yakin batalkan SJ ini?')) return;
-    setSuratJalan(suratJalan.map(sj => sj.id === id ? { ...sj, status: 'CANCELLED' } : sj));
+
+    const target = suratJalan.find(s => s.id === id || s.number === id);
+    const fromStatus = target?.status || 'UNKNOWN';
+
+    // Optimistic local update
+    const prevList = suratJalan;
+    setSuratJalan(suratJalan.map(sj => (sj.id === id || sj.number === id) ? { ...sj, status: 'CANCELLED' } : sj));
+
     try {
-      await fetch(`/api/surat-jalan/${id}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/surat-jalan/${id}/cancel`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CANCELLED' }),
+        body: JSON.stringify({ reason: 'Cancelled via SJ list' }),
+      });
+      if (!res.ok) throw new Error('Backend cancel failed');
+      addNotification({
+        type: 'success',
+        title: 'SJ Dibatalkan',
+        message: 'Surat Jalan berhasil dibatalkan.'
       });
     } catch (err) {
-      console.error('Cancel failed:', err);
-      fetchSuratJalan();
+      console.warn('Cancel API failed, applying locally (persisted):', err.message);
+      // Fallback to context action (this will persist via localStorage)
+      const sjNumber = target?.number || target?.documentNumber || id;
+      changeSJStatus(sjNumber, fromStatus, 'CANCELLED', 'Cancelled via list (offline mode)');
+      addNotification({
+        type: 'success',
+        title: 'SJ Dibatalkan (lokal)',
+        message: 'Perubahan disimpan di browser kamu.'
+      });
     }
   };
 
   const handleReturnSJ = async (id) => {
     if (!window.confirm('Kembalikan SJ ini ke status aktif?')) return;
-    setSuratJalan(suratJalan.map(sj => sj.id === id ? { ...sj, status: 'DRAFT' } : sj));
+
+    const target = suratJalan.find(s => s.id === id || s.number === id);
+    const fromStatus = target?.status || 'UNKNOWN';
+
+    const prevList = suratJalan;
+    setSuratJalan(suratJalan.map(sj => (sj.id === id || sj.number === id) ? { ...sj, status: 'DRAFT' } : sj));
+
     try {
-      await fetch(`/api/surat-jalan/${id}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/surat-jalan/${id}/restore`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'DRAFT' }),
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error('Backend restore failed');
+      addNotification({
+        type: 'success',
+        title: 'SJ Dikembalikan',
+        message: 'Surat Jalan dikembalikan ke status DRAFT.'
       });
     } catch (err) {
-      console.error('Return failed:', err);
-      fetchSuratJalan();
+      console.warn('Restore API failed, applying locally (persisted):', err.message);
+      const sjNumber = target?.number || target?.documentNumber || id;
+      changeSJStatus(sjNumber, fromStatus, 'DRAFT', 'Restored via list (offline mode)');
+      addNotification({
+        type: 'success',
+        title: 'SJ Dikembalikan (lokal)',
+        message: 'Perubahan disimpan di browser kamu.'
+      });
     }
   };
 
   const handleDeleteSJ = async (id) => {
     if (!window.confirm('Yakin hapus permanen SJ ini?')) return;
-    setSuratJalan(suratJalan.filter(sj => sj.id !== id));
+
+    const target = suratJalan.find(s => s.id === id || s.number === id);
+    const prevList = suratJalan;
+    setSuratJalan(suratJalan.filter(sj => (sj.id !== id && sj.number !== id)));
+
     try {
-      await fetch(`/api/surat-jalan/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/surat-jalan/${id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) throw new Error('Delete failed');
+      addNotification({
+        type: 'success',
+        title: 'SJ Dihapus',
+        message: 'Surat Jalan berhasil dihapus permanen.'
+      });
     } catch (err) {
-      console.error('Delete failed:', err);
-      fetchSuratJalan();
+      console.warn('Delete API failed, removing locally (persisted):', err.message);
+      if (target) {
+        contextDeleteSJ(target);
+      }
+      addNotification({
+        type: 'success',
+        title: 'SJ Dihapus (lokal)',
+        message: 'Perubahan disimpan di browser kamu.'
+      });
     }
   };
 

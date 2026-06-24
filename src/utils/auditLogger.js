@@ -5,7 +5,7 @@ const AUDIT_LOG_KEY = 'fleet_ops_audit_log';
 
 class AuditLogger {
   constructor() {
-    this.currentUser = 'System Admin'; // Will be replaced with auth context
+    this.currentUser = 'Alex Sterling'; // Prototype current user (matches UI in Sidebar)
   }
 
   /**
